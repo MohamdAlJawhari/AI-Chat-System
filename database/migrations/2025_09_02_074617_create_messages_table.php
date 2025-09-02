@@ -16,13 +16,13 @@ return new class extends Migration {
             $table->uuid('chat_id');
 
             $table->foreignId('user_id')
-                  ->nullable()
+                  ->nullable() // null for assistant/system/tool msgs
                   ->constrained('users')
                   ->nullOnDelete();
 
             $table->string('role'); // user | assistant | system | tool
-            $table->text('content')->nullable();
-            $table->jsonb('metadata')->nullable();
+            $table->text('content')->nullable(); // main text
+            $table->jsonb('metadata')->nullable(); // tokens, model, tool calls, attachments, etc.
             $table->timestampTz('created_at')->useCurrent();
             $table->timestampTz('updated_at')->nullable();
 
@@ -33,6 +33,7 @@ return new class extends Migration {
             $table->index(['chat_id', 'created_at']);
         });
 
+        // Add role CHECK constraint (Postgres)
         DB::statement("
             ALTER TABLE messages
             ADD CONSTRAINT messages_role_check

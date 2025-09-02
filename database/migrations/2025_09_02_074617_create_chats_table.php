@@ -17,8 +17,8 @@ return new class extends Migration {
                   ->constrained('users')
                   ->cascadeOnDelete();
 
-            $table->string('title')->nullable();
-            $table->jsonb('settings')->nullable();
+            $table->string('title')->nullable(); // e.g., auto from first user message
+            $table->jsonb('settings')->nullable(); // model, temperature, etc.
             $table->timestampsTz();
 
             $table->index(['user_id', 'created_at']);
