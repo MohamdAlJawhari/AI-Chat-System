@@ -10,6 +10,6 @@
     </div>
 
     <x-slot name="scripts">
-        <script src="/js/chat.js"></script>
+        <script type="module" src="/js/chat/main.js"></script>
     </x-slot>
 </x-layouts.app>
