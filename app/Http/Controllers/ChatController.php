@@ -6,12 +6,14 @@ use App\Models\Chat;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 
 class ChatController extends Controller
 {
-    // Dev-only: pretend first user is the logged-in user
     private function currentUserId(): int {
-        return User::query()->value('id');
+        $id = Auth::id();
+        if (!$id) abort(401);
+        return (int) $id;
     }
 
     public function index(Request $request)

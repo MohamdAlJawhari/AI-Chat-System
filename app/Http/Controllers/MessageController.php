@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Chat;
 use App\Models\Message;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -39,7 +40,7 @@ class MessageController extends Controller
         $msg = Message::create([
             'id' => (string) \Illuminate\Support\Str::uuid(),
             'chat_id' => $request->chat_id,
-            'user_id' => $request->role === 'user' ? (int) User::query()->value('id') : null,
+            'user_id' => $request->role === 'user' ? (int) (Auth::id() ?? 0) : null,
             'role' => $request->role,
             'content' => $request->input('content'),
             'metadata' => $request->metadata,
@@ -102,7 +103,7 @@ class MessageController extends Controller
         $userMsg = Message::create([
             'id' => (string) \Illuminate\Support\Str::uuid(),
             'chat_id' => $request->chat_id,
-            'user_id' => (int) User::query()->value('id'),
+            'user_id' => (int) (Auth::id() ?? 0),
             'role' => 'user',
             'content' => $request->input('content'),
             'metadata' => null,

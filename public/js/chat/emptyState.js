@@ -1,6 +1,6 @@
 import { el } from './dom.js';
 
-export function renderEmptyState() {
+export function renderEmptyState(showAuthCta = false) {
   // Inject ticker CSS once (seamless infinite loop via duplicated segments)
   if (!document.getElementById('ticker-style')) {
     const style = document.createElement('style');
@@ -27,6 +27,10 @@ export function renderEmptyState() {
 
   // Main card
   const card = el('div', 'rounded-2xl bg-white/80 dark:bg-neutral-800/80 backdrop-blur border border-slate-200 dark:border-neutral-700 px-6 py-8 shadow-md');
+  const authCtas = showAuthCta ? `<div class=\"mt-4 flex items-center justify-center gap-2\">
+    <button id=\"ctaSignIn\" class=\"rounded-md bg-slate-900 text-white dark:bg-white dark:text-black px-4 py-2 text-sm\">Sign in</button>
+    <button id=\"ctaSignUp\" class=\"rounded-md bg-slate-200 text-slate-900 dark:bg-neutral-800 dark:text-white px-4 py-2 text-sm\">Create account</button>
+  </div>` : '';
   card.innerHTML = `
     <div class="text-center">
       <div class="mx-auto w-10 h-10 rounded-full flex items-center justify-center bg-emerald-500/20 text-emerald-500 mb-3">
@@ -34,6 +38,7 @@ export function renderEmptyState() {
       </div>
       <h2 class="text-2xl font-semibold">How can I help you today?</h2>
       <p class="text-sm text-slate-600 dark:text-neutral-400">Start by asking a question or searching the archive.</p>
+      ${authCtas}
     </div>`;
   wrap.appendChild(card);
 
@@ -59,6 +64,13 @@ export function renderEmptyState() {
 
   wrap.appendChild(tickerBox);
 
+  // Hook CTAs to open auth modal via a custom event
+  if (showAuthCta) {
+    const signin = card.querySelector('#ctaSignIn');
+    const signup = card.querySelector('#ctaSignUp');
+    if (signin) signin.addEventListener('click', ()=> window.dispatchEvent(new CustomEvent('auth:prompt',{ detail:{ mode:'login' } })));
+    if (signup) signup.addEventListener('click', ()=> window.dispatchEvent(new CustomEvent('auth:prompt',{ detail:{ mode:'signup' } })));
+  }
+
   return wrap;
 }
-

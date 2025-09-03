@@ -9,6 +9,12 @@
     </button>
     <div class="text-xs text-neutral-400 uppercase tracking-wide mb-2">Chats</div>
     <div id="chatList" class="space-y-1 overflow-y-auto grow"></div>
-    <div class="pt-4 text-xs text-neutral-500">© UChat (dev)</div>
+    <div class="pt-4 text-xs text-neutral-500">
+        <div id="authStatus" class="flex items-center gap-2">
+            <span class="inline-flex h-2 w-2 rounded-full bg-red-500" id="authDot"></span>
+            <span id="authText">Not signed in</span>
+        </div>
+        <div class="mt-2">© UChat (dev)</div>
+    </div>
 </aside>
 <div id="sidebarDivider" class="w-1 cursor-col-resize bg-slate-200 hover:bg-slate-300 dark:bg-neutral-800 dark:hover:bg-neutral-700"></div>

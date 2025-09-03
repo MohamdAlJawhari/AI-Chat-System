@@ -12,4 +12,5 @@
     <x-slot name="scripts">
         <script type="module" src="/js/chat/main.js"></script>
     </x-slot>
+    <x-auth.modal />
 </x-layouts.app>

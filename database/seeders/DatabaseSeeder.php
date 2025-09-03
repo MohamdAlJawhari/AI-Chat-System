@@ -11,8 +11,9 @@ class DatabaseSeeder extends Seeder
         // Keep factories if you want random users
         \App\Models\User::factory(1)->create();
 
-        // Add your DemoSeeder
+        // Seed admin and demo content
         $this->call([
+            AdminSeeder::class,
             DemoSeeder::class,
         ]);
     }
