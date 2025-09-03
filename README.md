@@ -1,61 +1,174 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# UChat — Laravel + Ollama Chat (Streaming)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+UChat is a lightweight ChatGPT‑style web app built with Laravel. It talks to a locally running open‑source LLM (via Ollama), supports streaming responses, Markdown tables and Mermaid diagrams, right‑to‑left text, per‑chat model selection, and a clean, modular front‑end.
 
-## About Laravel
+## Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Streaming chat to a local LLM (Ollama)
+- Chats CRUD: create, rename, delete, list
+- Per‑chat settings: model (selectable from env‑configured list)
+- Markdown rendering with tables and Mermaid diagrams (sanitized)
+- Automatic RTL/LTR detection (Arabic/Hebrew supported)
+- Auto‑title from the first user message
+- Sidebar: resizable and collapsible; subtle gradient background
+- Auth (token‑based), Sign in/Sign up modal UI
+- Admin role (block/unblock users), seeded admin
+- Modular front‑end (vanilla JS ES modules under `public/js/chat/`)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Requirements
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP 8.2+
+- Composer
+- A database (PostgreSQL recommended; migrations include `uuid-ossp` and JSONB)
+- Ollama running locally (default `http://127.0.0.1:11434`)
 
-## Learning Laravel
+## Quick Start
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+1) Install dependencies
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+- `composer install`
+- (Optional) `php artisan key:generate` (if `APP_KEY` missing)
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+2) Configure `.env`
 
-## Laravel Sponsors
+- LLM
+  - `LLM_BASE_URL=http://127.0.0.1:11434`
+  - `LLM_MODEL=gpt-oss:20b` (no trailing spaces)
+  - `LLM_MODEL2=openchat` (second selectable model)
+- Database (example for Postgres)
+  - `DB_CONNECTION=pgsql`
+  - `DB_HOST=127.0.0.1`
+  - `DB_PORT=5432`
+  - `DB_DATABASE=ai_chat_db`
+  - `DB_USERNAME=...`
+  - `DB_PASSWORD=...`
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+3) Migrate and seed
 
-### Premium Partners
+- `php artisan migrate`
+- `php artisan db:seed` (creates an admin user and demo data)
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Admin credentials
 
-## Contributing
+- Email: `admin@example.com`
+- Password: `A@admin123`
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+4) Ensure models are present in Ollama
 
-## Code of Conduct
+- `ollama pull gpt-oss:20b`
+- `ollama pull openchat`
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+5) Run the app
 
-## Security Vulnerabilities
+- `php artisan serve`
+- Open the URL shown (e.g., `http://127.0.0.1:8000`)
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Using the App
+
+- If not signed in, the home view shows an empty state with Sign in and Create account buttons.
+- Click the user icon in the top bar to open the account menu (Sign in, Sign up, Sign out, Switch account).
+- Bottom‑left shows sign‑in status and the current account.
+- Create chats from the sidebar (New chat) or start typing to create implicitly.
+- Choose a model from the top bar. Changing the model while a chat is selected updates just that chat.
+- The assistant streams replies live. Markdown tables and Mermaid blocks render nicely; RTL text auto‑aligns.
+- Collapse/expand and resize the sidebar from the top‑left chevron and divider.
+
+## Architecture Overview
+
+Back‑end (Laravel)
+
+- LLM client: `app/Services/LlmClient.php`
+- REST routes: `routes/api.php`
+- Controllers: `app/Http/Controllers/*`
+  - `ChatController` (chats CRUD)
+  - `MessageController` (list + send, with streaming endpoint)
+  - `AuthController` (login, register, logout, me)
+  - `Admin/UserAdminController` (list users, block/unblock)
+- Auth middleware (token): `app/Http/Middleware/AuthToken.php`
+- Config: `config/llm.php` (base URL, model names, system prompt)
+- Migrations: `database/migrations/*` (UUID ids, JSONB, auth fields)
+- Seeders: `database/seeders/AdminSeeder.php`, `DemoSeeder.php`, `DatabaseSeeder.php`
+
+Front‑end (vanilla JS ES modules)
+
+- Entry point: `public/js/chat/main.js` (bootstraps UI, loads data)
+- Modules: `public/js/chat/`
+  - `api.js` — fetch wrappers with token + 401 retry
+  - `auth.js` — token storage, login/register/logout
+  - `authUI.js` — user menu + modal (login/sign‑up)
+  - `stream.js` — streaming send (SSE), smooth renderer
+  - `ui.js` — message bubbles, chat list items
+  - `emptyState.js` — signed‑out welcome state (CTAs)
+  - `markdown.js` — Markdown + sanitize + Mermaid
+  - `rtl.js` — direction detection and application
+  - `sidebar.js` — resize + collapse behavior
+  - `composer.js` — auto‑resize + RTL for the input
+  - `dom.js`, `state.js`, `util.js` — helpers
+- Views: Blade components render the layout and slots
+  - Layout: `resources/views/components/layouts/app.blade.php`
+  - Chat page: `resources/views/chat.blade.php`
+  - Chat components: `resources/views/components/chat/*`
+  - Auth modal: `resources/views/components/auth/modal.blade.php`
+
+## API Reference (selected)
+
+Auth
+
+- `POST /api/auth/register` — body `{ name, email, password }` → `{ token, user }`
+- `POST /api/auth/login` — body `{ email, password }` → `{ token, user }`
+- `POST /api/auth/logout` — requires `Authorization: Bearer <token>`
+- `GET /api/auth/me` — returns `{ id, name, email, role }`
+
+Chats and messages (all require `Authorization: Bearer <token>`)
+
+- `GET /api/chats` — list chats (id, title, settings, created_at)
+- `POST /api/chats` — create chat `{ settings: { model } }` → chat
+- `PATCH /api/chats/{id}` — partial update `{ title? , settings? }`
+- `DELETE /api/chats/{id}` — delete chat + cascade messages
+- `GET /api/chats/{id}/messages` — list messages
+- `POST /api/messages` — add message (non‑stream)
+- `POST /api/messages/stream` — stream assistant reply (SSE)
+- `GET /api/models` — returns `[LLM_MODEL, LLM_MODEL2]`
+
+Admin (admin token required)
+
+- `GET /api/admin/users` — list users
+- `POST /api/admin/users/{user}/block`
+- `POST /api/admin/users/{user}/unblock`
+
+Headers
+
+- Most endpoints require `Authorization: Bearer <token>` and `Accept: application/json`.
+- Streaming uses `Accept: text/event-stream`.
+
+## LLM Configuration
+
+- Default base URL: `LLM_BASE_URL` (`http://127.0.0.1:11434`)
+- Models: `LLM_MODEL` and `LLM_MODEL2` define the dropdown options and defaults.
+- System prompt: `LLM_SYSTEM` (used on every conversation start)
+
+## Troubleshooting
+
+- “Not signed in” or 401 loop
+  - Clear token in DevTools Console:
+    - `localStorage.removeItem('apiToken'); location.reload();`
+  - Sign in via the top‑bar user menu or empty state buttons.
+- Windows: `php artisan db` error (TTY not supported)
+  - Use `php artisan db:seed` (or `--class=`) instead of `php artisan db`.
+- Postgres: `uuid-ossp`
+  - Ensure your DB user can `CREATE EXTENSION "uuid-ossp";` or pre‑install the extension.
+- Streaming displays literal pipes (`|`)
+  - Ask the model to output raw Markdown tables instead of fenced code blocks. GFM tables render and are sanitized.
+- Assistant reply disappears after streaming
+  - Fixed: streamed content is preserved; we refresh only the chat list (for titles).
+
+## Security Notes
+
+- Token auth is stored in localStorage for simplicity; prefer HTTPS and token rotation in production.
+- Markdown output is sanitized with DOMPurify. Only common attributes and tags are allowed.
+- Admin block prevents blocked users from authenticating to protected APIs.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is provided as‑is, without warranty. Add a license file if you plan to distribute it.
+
