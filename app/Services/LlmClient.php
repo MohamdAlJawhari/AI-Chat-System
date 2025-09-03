@@ -13,8 +13,9 @@ class LlmClient
      */
     public function chat(array $messages, ?string $model = null, array $options = []): string
     {
-        $base  = rtrim(config('llm.base_url'), '/');
-        $model = $model ?? config('llm.model');
+        $base  = rtrim((string) config('llm.base_url'), '/');
+        // Be forgiving about whitespace in env/config
+        $model = trim($model ?? (string) config('llm.model'));
 
         $payload = array_merge([
             'model'    => $model,
@@ -26,5 +27,18 @@ class LlmClient
         $json = $res->json();
 
         return data_get($json, 'message.content', '');
+    }
+
+    public function listModels(): array
+    {
+        $base = rtrim((string) config('llm.base_url'), '/');
+        $res = Http::timeout(10)->get("$base/api/tags");
+        if (!$res->successful()) return [];
+        $out = [];
+        foreach ((array) data_get($res->json(), 'models', []) as $m) {
+            $name = (string) data_get($m, 'name');
+            if ($name !== '') $out[] = $name;
+        }
+        return $out;
     }
 }

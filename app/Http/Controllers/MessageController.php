@@ -5,14 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\Chat;
 use App\Models\Message;
 use App\Models\User;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-
 
 class MessageController extends Controller
 {
+    private function summarizeTitle(string $text): string
+    {
+        $line = preg_split('/\r?\n/', trim($text))[0] ?? '';
+        $line = trim($line, " \t\-–—•:.");
+        return \Illuminate\Support\Str::limit($line !== '' ? $line : 'New chat', 60, '…');
+    }
+
     public function index(Chat $chat)
     {
         $messages = $chat->messages()
@@ -32,10 +36,10 @@ class MessageController extends Controller
         ]);
 
         // 1) Save incoming message
-        $msg = \App\Models\Message::create([
+        $msg = Message::create([
             'id' => (string) \Illuminate\Support\Str::uuid(),
             'chat_id' => $request->chat_id,
-            'user_id' => $request->role === 'user' ? (int) \App\Models\User::query()->value('id') : null,
+            'user_id' => $request->role === 'user' ? (int) User::query()->value('id') : null,
             'role' => $request->role,
             'content' => $request->input('content'),
             'metadata' => $request->metadata,
@@ -47,7 +51,13 @@ class MessageController extends Controller
         }
 
         // 2) Build short history + system prompt
-        $chat = \App\Models\Chat::findOrFail($request->chat_id);
+        $chat = Chat::findOrFail($request->chat_id);
+
+        // Generate a title from the first user message if missing
+        if (empty($chat->title) && $request->filled('content')) {
+            $chat->title = $this->summarizeTitle((string) $request->input('content'));
+            $chat->save();
+        }
 
         $history = $chat->messages()->orderBy('created_at')->take(20)->get();
         $messages = [];
@@ -56,8 +66,7 @@ class MessageController extends Controller
             $messages[] = ['role' => 'system', 'content' => $sp];
         }
         foreach ($history as $m) {
-            if ($m->content === null)
-                continue;
+            if ($m->content === null) continue;
             $messages[] = ['role' => $m->role, 'content' => $m->content];
         }
 
@@ -66,13 +75,13 @@ class MessageController extends Controller
         $assistantText = app(\App\Services\LlmClient::class)->chat($messages, $modelFromSettings);
 
         // 4) Save assistant reply
-        $assistant = \App\Models\Message::create([
+        $assistant = Message::create([
             'id' => (string) \Illuminate\Support\Str::uuid(),
             'chat_id' => $chat->id,
             'user_id' => null,
             'role' => 'assistant',
             'content' => $assistantText,
-            'metadata' => ['model' => $modelFromSettings ?? config('llm.model')],
+            'metadata' => ['model' => trim($modelFromSettings ?? (string) config('llm.model'))],
         ]);
 
         return response()->json([
@@ -81,4 +90,113 @@ class MessageController extends Controller
         ], 201);
     }
 
+    public function storeStream(Request $request)
+    {
+        $request->validate([
+            'chat_id' => ['required', 'uuid', Rule::exists('chats', 'id')],
+            'role' => ['required', 'string', Rule::in(['user'])],
+            'content' => ['required', 'string'],
+        ]);
+
+        // Save user message
+        $userMsg = Message::create([
+            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'chat_id' => $request->chat_id,
+            'user_id' => (int) User::query()->value('id'),
+            'role' => 'user',
+            'content' => $request->input('content'),
+            'metadata' => null,
+        ]);
+
+        $chat = Chat::findOrFail($request->chat_id);
+        if (empty($chat->title)) {
+            $chat->title = $this->summarizeTitle((string) $request->input('content'));
+            $chat->save();
+        }
+
+        $history = $chat->messages()->orderBy('created_at')->take(20)->get();
+        $messages = [];
+        if ($sp = config('llm.system_prompt')) {
+            $messages[] = ['role' => 'system', 'content' => $sp];
+        }
+        foreach ($history as $m) {
+            if ($m->content === null) continue;
+            $messages[] = ['role' => $m->role, 'content' => $m->content];
+        }
+
+        $modelFromSettings = data_get($chat->settings, 'model');
+        $base = rtrim((string) config('llm.base_url'), '/');
+        $model = trim($modelFromSettings ?? (string) config('llm.model'));
+
+        $payload = [
+            'model' => $model,
+            'messages' => $messages,
+            'stream' => true,
+        ];
+
+        $httpRes = \Illuminate\Support\Facades\Http::withOptions(['stream' => true, 'timeout' => 0])
+            ->post("$base/api/chat", $payload);
+
+        if ($httpRes->failed()) {
+            return response()->json([
+                'message' => 'LLM call failed',
+                'status' => $httpRes->status(),
+                'body' => $httpRes->body(),
+            ], $httpRes->status());
+        }
+
+        $assistantId = (string) \Illuminate\Support\Str::uuid();
+
+        return response()->stream(function () use ($httpRes, $chat, $assistantId, $model) {
+            $body = $httpRes->toPsrResponse()->getBody();
+            $buffer = '';
+            $assistantText = '';
+            $modelUsed = $model;
+
+            $send = function (array $data) {
+                echo 'data: ' . json_encode($data) . "\n\n";
+                @ob_flush();
+                @flush();
+            };
+
+            while (!$body->eof()) {
+                $chunk = $body->read(8192);
+                if ($chunk === '' || $chunk === false) { usleep(10000); continue; }
+                $buffer .= $chunk;
+
+                while (($pos = strpos($buffer, "\n")) !== false) {
+                    $line = trim(substr($buffer, 0, $pos));
+                    $buffer = substr($buffer, $pos + 1);
+                    if ($line === '') continue;
+                    $evt = json_decode($line, true);
+                    if (!is_array($evt)) continue;
+
+                    $delta = data_get($evt, 'message.content', '');
+                    if ($delta !== '') {
+                        $assistantText .= $delta;
+                        $send(['delta' => $delta]);
+                    }
+                    if (data_get($evt, 'model')) {
+                        $modelUsed = (string) data_get($evt, 'model');
+                    }
+                    if (data_get($evt, 'done') === true) {
+                        $send(['done' => true]);
+                    }
+                }
+            }
+
+            Message::create([
+                'id' => $assistantId,
+                'chat_id' => $chat->id,
+                'user_id' => null,
+                'role' => 'assistant',
+                'content' => $assistantText,
+                'metadata' => ['model' => $modelUsed],
+            ]);
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache, no-transform',
+            'X-Accel-Buffering' => 'no',
+        ]);
+    }
 }
