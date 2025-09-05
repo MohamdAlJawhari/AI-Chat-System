@@ -10,7 +10,7 @@
     </div>
 
     <x-slot name="scripts">
-        <script type="module" src="/js/chat/main.js"></script>
+        @php($__main_ver = @filemtime(public_path('js/chat/main.js')) ?: time())
+        <script type="module" src="/js/chat/main.js?v={{ $__main_ver }}"></script>
     </x-slot>
-    <x-auth.modal />
 </x-layouts.app>

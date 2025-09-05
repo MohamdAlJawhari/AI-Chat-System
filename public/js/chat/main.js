@@ -4,8 +4,6 @@ import { initSidebar } from './sidebar.js';
 import { apiGet, apiPost, apiPatch, apiDelete } from './api.js';
 import { messageBubble, chatItem } from './ui.js';
 import { renderEmptyState } from './emptyState.js';
-import { getToken } from './auth.js';
-import { initAuthUI } from './authUI.js';
 import { initComposer } from './composer.js';
 import { sendMessage } from './stream.js';
 
@@ -14,10 +12,34 @@ function setTheme(mode){
   else document.documentElement.classList.remove('dark');
   localStorage.setItem('theme', mode);
   const icon = document.getElementById('themeIcon') || (elements.themeToggle ? elements.themeToggle.querySelector('i') : null);
-  if (icon) icon.className = mode === 'dark' ? 'fa-solid fa-moon' : 'fa-notdog fa-solid fa-sun';
+  if (icon) icon.className = mode === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
   if (window.mermaid){ try{ mermaid.initialize({ startOnLoad:false, theme: mode==='dark'?'dark':'default' }); }catch{} }
 }
 function initTheme(){ const t = localStorage.getItem('theme'); const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; setTheme(t || (prefersDark ? 'dark' : 'light')); }
+
+function initUserMenu(){
+  const btn = document.getElementById('userBtn');
+  const menu = document.getElementById('userMenu');
+  if (!btn || !menu) return;
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  const authStatus = document.querySelector('meta[name="auth-status"]')?.getAttribute('content') || 'guest';
+  // Populate menu once
+  menu.innerHTML = '';
+  if (authStatus === 'auth') {
+    const profile = document.createElement('a'); profile.href='/profile'; profile.className='block px-3 py-2 hover:bg-slate-100 dark:hover:bg-neutral-800'; profile.textContent='Profile';
+    const form = document.createElement('form'); form.method='POST'; form.action='/logout'; form.innerHTML=`<input type=\"hidden\" name=\"_token\" value=\"${csrf}\">`;
+    const outBtn = document.createElement('button'); outBtn.type='submit'; outBtn.className='w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-neutral-800'; outBtn.textContent='Sign out';
+    form.appendChild(outBtn); menu.append(profile, form);
+  } else {
+    const li = document.createElement('a'); li.href='/login'; li.className='block px-3 py-2 hover:bg-slate-100 dark:hover:bg-neutral-800'; li.textContent='Sign in';
+    const rg = document.createElement('a'); rg.href='/register'; rg.className='block px-3 py-2 hover:bg-slate-100 dark:hover:bg-neutral-800'; rg.textContent='Create account';
+    menu.append(li, rg);
+  }
+  function open(){ menu.classList.remove('hidden'); document.addEventListener('click', outside, { once:true }); }
+  function close(){ menu.classList.add('hidden'); }
+  function outside(e){ if (!menu.contains(e.target) && e.target !== btn) close(); else document.addEventListener('click', outside, { once:true }); }
+  btn.addEventListener('click', (e)=>{ e.stopPropagation(); if (menu.classList.contains('hidden')) open(); else close(); });
+}
 
 async function loadMessages(){
   const { messagesEl } = elements; if (!state.currentChatId){ messagesEl.innerHTML=''; return; }
@@ -47,42 +69,23 @@ async function loadChats(){
 async function createChatIfNeeded(){ if (state.currentChatId) return state.currentChatId; const chat = await apiPost('/api/chats',{ settings:{ model: elements.modelSelect.value }}); state.currentChatId = chat.id; await loadChats(); return state.currentChatId; }
 
 async function bootstrap(){
-  initTheme(); initSidebar(state); initComposer();
-  // Auth status in sidebar
-  async function updateAuthStatus(){
+  initTheme(); initSidebar(state); initComposer(); initUserMenu();
+  // Auth status (session-based)
+  function updateAuthStatus(){
     const dot = document.getElementById('authDot');
     const text = document.getElementById('authText');
-    try {
-      const t = getToken();
-      if (!t) throw new Error('no token');
-      const r = await fetch('/api/auth/me', { headers: { 'Accept':'application/json', 'Authorization': `Bearer ${t}` } });
-      if (!r.ok) throw new Error('unauth');
-      const u = await r.json();
-      if (dot) dot.className = 'inline-flex h-2 w-2 rounded-full bg-emerald-500';
-      if (text) text.textContent = `Signed in as ${u.email} (${u.role})`;
-    } catch {
-      if (dot) dot.className = 'inline-flex h-2 w-2 rounded-full bg-red-500';
-      if (text) text.textContent = 'Not signed in';
-    }
+    const authStatus = document.querySelector('meta[name="auth-status"]')?.getAttribute('content') || 'guest';
+    const isAuth = authStatus === 'auth';
+    if (dot) dot.className = 'inline-flex h-2 w-2 rounded-full ' + (isAuth ? 'bg-emerald-500' : 'bg-red-500');
+    if (text) text.textContent = isAuth ? 'Signed in' : 'Not signed in';
   }
   // models
   try{
     const models = await apiGet('/api/models');
     if (Array.isArray(models) && models.length){ elements.modelSelect.innerHTML=''; for (const m of models){ const opt = document.createElement('option'); opt.value=m; opt.textContent=m; elements.modelSelect.appendChild(opt);} }
   }catch{ elements.modelSelect.innerHTML=''; ['gpt-oss:20b','openchat'].forEach(m=>{ const opt = document.createElement('option'); opt.value=m; opt.textContent=m; elements.modelSelect.appendChild(opt); }); }
-  // If not signed in, show friendly empty state and let user sign in/up
-  if (!getToken()) {
-    elements.messagesEl.innerHTML = '';
-    elements.messagesEl.appendChild(renderEmptyState(true));
-    await updateAuthStatus();
-    initAuthUI(updateAuthStatus);
-    // When auth changes, load chats
-    window.addEventListener('auth:changed', async ()=>{ await loadChats(); await updateAuthStatus(); });
-  } else {
-    await loadChats();
-    await updateAuthStatus();
-    initAuthUI(updateAuthStatus);
-  }
+  await loadChats();
+  updateAuthStatus();
 
   // events
   elements.newChatBtn.addEventListener('click', async ()=>{ state.currentChatId=null; await createChatIfNeeded(); elements.messagesEl.innerHTML=''; await updateAuthStatus(); });

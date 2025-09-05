@@ -28,8 +28,8 @@ export function renderEmptyState(showAuthCta = false) {
   // Main card
   const card = el('div', 'rounded-2xl bg-white/80 dark:bg-neutral-800/80 backdrop-blur border border-slate-200 dark:border-neutral-700 px-6 py-8 shadow-md');
   const authCtas = showAuthCta ? `<div class=\"mt-4 flex items-center justify-center gap-2\">
-    <button id=\"ctaSignIn\" class=\"rounded-md bg-slate-900 text-white dark:bg-white dark:text-black px-4 py-2 text-sm\">Sign in</button>
-    <button id=\"ctaSignUp\" class=\"rounded-md bg-slate-200 text-slate-900 dark:bg-neutral-800 dark:text-white px-4 py-2 text-sm\">Create account</button>
+    <a href=\"/login\" class=\"rounded-md bg-slate-900 text-white dark:bg-white dark:text-black px-4 py-2 text-sm\">Sign in</a>
+    <a href=\"/register\" class=\"rounded-md bg-slate-200 text-slate-900 dark:bg-neutral-800 dark:text-white px-4 py-2 text-sm\">Create account</a>
   </div>` : '';
   card.innerHTML = `
     <div class="text-center">
@@ -65,12 +65,36 @@ export function renderEmptyState(showAuthCta = false) {
   wrap.appendChild(tickerBox);
 
   // Hook CTAs to open auth modal via a custom event
-  if (showAuthCta) {
-    const signin = card.querySelector('#ctaSignIn');
-    const signup = card.querySelector('#ctaSignUp');
-    if (signin) signin.addEventListener('click', ()=> window.dispatchEvent(new CustomEvent('auth:prompt',{ detail:{ mode:'login' } })));
-    if (signup) signup.addEventListener('click', ()=> window.dispatchEvent(new CustomEvent('auth:prompt',{ detail:{ mode:'signup' } })));
-  }
+  // No JS needed; anchor tags handle navigation.
 
   return wrap;
+}
+
+export function renderTickerOnly(){
+  if (!document.getElementById('ticker-style')) {
+    const style = document.createElement('style');
+    style.id = 'ticker-style';
+    style.textContent = `
+      .uchat-ticker-row { position: relative; overflow: hidden; }
+      .uchat-ticker-track { display: flex; width: max-content; white-space: nowrap; will-change: transform; }
+      .uchat-ticker-seg { padding-inline-end: 2rem; }
+      @keyframes uchat-scroll-ltr { 0%{transform:translateX(0)} 100%{transform:translateX(-15%)} }
+      @keyframes uchat-scroll-rtl { 0%{transform:translateX(0)} 100%{transform:translateX(15%)} }
+      .uchat-anim-ltr { animation: uchat-scroll-ltr 30s linear infinite; }
+      .uchat-anim-rtl { animation: uchat-scroll-rtl 30s linear infinite; }
+    `;
+    document.head.appendChild(style);
+  }
+  const box = document.createElement('div');
+  box.className = 'relative w-full overflow-hidden rounded-lg border border-slate-200 bg-white/70 divide-y divide-slate-200';
+  const buildTicker = ({ dir, text, animClass }) => {
+    const row = document.createElement('div'); row.className = 'uchat-ticker-row'; row.setAttribute('dir', dir);
+    const seg = `<span class=\"uchat-ticker-seg\">${text}</span>`; const segments = [seg,seg,seg,seg].join('');
+    row.innerHTML = `<div class=\"px-3 py-2 text-xs md:text-sm text-slate-700\"><div class=\"uchat-ticker-track ${animClass}\">${segments}</div></div>`; return row;
+  };
+  const enText = `||| => Unews is a multimedia news agency producing news videos and broadcasting live events | We are a leading news agency that provides reliable news, envisioning accurate and objective coverage | We cover events in real time via live broadcasting techniques, providing full news content on an online platform: video, audio files, photographs and texts | Unews provides its services in five languages for TV channels, radios, press and online media | We deliver news services upon request. We provide guests for programs and assist correspondents to go live from the scene | `;
+  const arText = ` | نحن وكالة أنباء رائدة نقدم الأخبار الموثوقة الصحيحة والدقة والموضوعية | نحن ننقل الأحداث في وقتها الحقيقي عبر تقنيات البث المباشر ونوفر المحتوى الإخباري الكامل: الفيديو والصوت والصور والنصوص. كل ذلك على منصة إلكترونية واحدة | تقدم يو إن نيوز خدماتها الإعلامية إلى القنوات التلفزيونية والإذاعات والصحف والإعلام الإلكتروني بخمس لغات عالمية | دائماً حساس بقوة الخبر <= ||| `;
+  box.appendChild(buildTicker({ dir:'ltr', text: enText, animClass:'uchat-anim-ltr' }));
+  box.appendChild(buildTicker({ dir:'rtl', text: arText, animClass:'uchat-anim-rtl' }));
+  return box;
 }

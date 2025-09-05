@@ -12,11 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Route middleware aliases
-        $middleware->alias([
-            'auth.token' => \App\Http\Middleware\AuthToken::class,
-        ]);
+        // Route middleware aliases (legacy token middleware removed)
+        $middleware->alias([]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();
+

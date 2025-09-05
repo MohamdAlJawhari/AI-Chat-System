@@ -2,7 +2,6 @@ import { elements, el } from './dom.js';
 import { renderSafeMarkdown, styleRichContent } from './markdown.js';
 import { applyDirection } from './rtl.js';
 import { messageBubble } from './ui.js';
-import { getToken } from './auth.js';
 
 export async function sendMessage(state, { createChatIfNeeded, loadMessages, loadChats }){
   const { messagesEl, composer, sendBtn } = elements;
@@ -26,8 +25,8 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
     thinking.innerHTML = '<span class="inline-flex w-2 h-2 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.2s]"></span><span class="inline-flex w-2 h-2 rounded-full bg-slate-400 animate-bounce"></span><span class="inline-flex w-2 h-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.2s]"></span>';
     assistant._contentEl.appendChild(thinking); assistant._thinkingEl = thinking;
 
-    const token = getToken();
-    const r = await fetch('/api/messages/stream', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }, body: JSON.stringify({ chat_id: state.currentChatId, role: 'user', content: text }) });
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const r = await fetch('/api/messages/stream', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin', body: JSON.stringify({ chat_id: state.currentChatId, role: 'user', content: text }) });
     if (!r.ok || !r.body) throw new Error(await r.text());
 
     const reader = r.body.getReader();

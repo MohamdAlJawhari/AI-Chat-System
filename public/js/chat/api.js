@@ -1,54 +1,38 @@
-import { ensureAuth, getToken } from './auth.js';
+function csrf() {
+  const el = document.querySelector('meta[name="csrf-token"]');
+  return el ? el.getAttribute('content') : '';
+}
 
-function authHeaders() {
-  const hdrs = { 'Accept': 'application/json' };
-  const t = getToken();
-  if (t) hdrs['Authorization'] = `Bearer ${t}`;
-  return hdrs;
+function baseHeaders() {
+  return { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
 }
 
 export async function apiGet(path) {
-  const doFetch = () => fetch(path, { headers: authHeaders() });
-  let r = await doFetch();
-  if (r.status === 401) {
-    const ok = await ensureAuth();
-    if (ok) r = await doFetch();
-  }
+  const r = await fetch(path, { headers: baseHeaders(), credentials: 'same-origin' });
+  if (r.status === 401) { try{ window.location.assign('/login'); }catch{} throw new Error('Unauthorized'); }
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
 
 export async function apiPost(path, body) {
-  const doFetch = () => fetch(path, { method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}) });
-  let r = await doFetch();
-  if (r.status === 401) {
-    const ok = await ensureAuth();
-    if (ok) r = await doFetch();
-  }
+  const r = await fetch(path, { method: 'POST', headers: { ...baseHeaders(), 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf() }, credentials: 'same-origin', body: JSON.stringify(body ?? {}) });
+  if (r.status === 401) { try{ window.location.assign('/login'); }catch{} throw new Error('Unauthorized'); }
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
 
 export async function apiPatch(path, body) {
-  const doFetch = () => fetch(path, { method: 'PATCH', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}) });
-  let r = await doFetch();
-  if (r.status === 401) {
-    const ok = await ensureAuth();
-    if (ok) r = await doFetch();
-  }
+  const r = await fetch(path, { method: 'PATCH', headers: { ...baseHeaders(), 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf() }, credentials: 'same-origin', body: JSON.stringify(body ?? {}) });
+  if (r.status === 401) { try{ window.location.assign('/login'); }catch{} throw new Error('Unauthorized'); }
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
 
 export async function apiDelete(path) {
-  const doFetch = () => fetch(path, { method: 'DELETE', headers: authHeaders() });
-  let r = await doFetch();
-  if (r.status === 401) {
-    const ok = await ensureAuth();
-    if (ok) r = await doFetch();
-  }
+  const r = await fetch(path, { method: 'DELETE', headers: { ...baseHeaders(), 'X-CSRF-TOKEN': csrf() }, credentials: 'same-origin' });
+  if (r.status === 401) { try{ window.location.assign('/login'); }catch{} throw new Error('Unauthorized'); }
   if (!r.ok) throw new Error(await r.text());
   return r.json().catch(() => ({}));
 }
 
-export function getAuthHeaders() { return authHeaders(); }
+export function getAuthHeaders() { return baseHeaders(); }

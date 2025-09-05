@@ -24,8 +24,8 @@ export function messageBubble(role, content, metadata = null) {
 }
 
 export function chatItem(chat, { onSelect, onRename, onDelete, active }) {
-  const row = el('div', 'group flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-neutral-800');
-  if (active) row.classList.add('bg-neutral-800');
+  const row = el('div', 'group flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-neutral-800');
+  if (active) row.classList.add('bg-slate-200','dark:bg-neutral-800');
   const btn = el('button', 'flex-1 text-left px-1 py-1'); btn.textContent = chat.title || 'Untitled'; btn.onclick = () => onSelect(chat.id);
   const rename = el('button', 'opacity-60 hover:opacity-100 text-xs px-1 py-0.5 hidden group-hover:block'); rename.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>'; rename.title = 'Rename chat'; rename.onclick = (e) => { e.stopPropagation(); onRename(chat); };
   const del = el('button', 'opacity-60 hover:opacity-100 text-xs px-1 py-0.5 hidden group-hover:block'); del.innerHTML = '<i class="fa-solid fa-trash"></i>'; del.title = 'Delete chat'; del.onclick = (e) => { e.stopPropagation(); onDelete(chat); };
