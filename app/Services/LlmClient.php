@@ -19,13 +19,20 @@ class LlmClient
         // Be forgiving about whitespace in env/config
         $model = trim($model ?? (string) config('llm.model'));
 
+        // Allow caller to pass a custom HTTP timeout via options
+        $httpTimeout = 120;
+        if (isset($options['http_timeout'])) {
+            $httpTimeout = (int) $options['http_timeout'];
+            unset($options['http_timeout']);
+        }
+
         $payload = array_merge([
             'model'    => $model,
             'messages' => $messages,
             'stream'   => false,
         ], $options);
 
-        $res = Http::timeout(120)->post("$base/api/chat", $payload);
+        $res = Http::timeout($httpTimeout)->post("$base/api/chat", $payload);
         $json = $res->json();
 
         return data_get($json, 'message.content', '');

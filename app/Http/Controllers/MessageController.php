@@ -7,7 +7,6 @@ use App\Models\Message;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use App\Support\Text;
 
 /**
  * Message endpoints: list messages, create message (non-stream), and
@@ -54,11 +53,7 @@ class MessageController extends Controller
         // 2) Build short history + system prompt
         $chat = Chat::findOrFail($request->chat_id);
 
-        // Generate a title from the first user message if missing
-        if (empty($chat->title) && $request->filled('content')) {
-            $chat->title = Text::summarizeTitle((string) $request->input('content'));
-            $chat->save();
-        }
+        // Title will be generated after the assistant reply based on the conversation start
 
         $history = $chat->messages()->orderBy('created_at')->take(20)->get();
         $messages = [];
@@ -84,6 +79,14 @@ class MessageController extends Controller
             'content' => $assistantText,
             'metadata' => ['model' => trim($modelFromSettings ?? (string) config('llm.model'))],
         ]);
+
+        // Generate title now that we have both sides of the start of the conversation
+        if (empty($chat->title)) {
+            try {
+                $chat->title = \App\Support\Title::generateFromChatStart($chat, $modelFromSettings);
+                $chat->save();
+            } catch (\Throwable $e) { /* ignore */ }
+        }
 
         return response()->json([
             'user_message' => $msg,
@@ -116,10 +119,7 @@ class MessageController extends Controller
         ]);
 
         $chat = Chat::findOrFail($request->chat_id);
-        if (empty($chat->title)) {
-            $chat->title = Text::summarizeTitle((string) $request->input('content'));
-            $chat->save();
-        }
+        // Defer title generation until after assistant message is persisted (end of stream)
 
         $history = $chat->messages()->orderBy('created_at')->take(20)->get();
         $messages = [];
@@ -155,10 +155,14 @@ class MessageController extends Controller
         $assistantId = (string) \Illuminate\Support\Str::uuid();
 
         return response()->stream(function () use ($httpRes, $chat, $assistantId, $model) {
+            // Continue processing even if client disconnects
+            @ignore_user_abort(true);
             $body = $httpRes->toPsrResponse()->getBody();
             $buffer = '';
             $assistantText = '';
             $modelUsed = $model;
+            $assistantCreated = false;
+            $lastPersistLen = 0;
 
             $send = function (array $data) {
                 echo 'data: ' . json_encode($data) . "\n\n";
@@ -182,6 +186,28 @@ class MessageController extends Controller
                     if ($delta !== '') {
                         $assistantText .= $delta;
                         $send(['delta' => $delta]);
+
+                        // Create the assistant message in DB on first token, then occasionally update
+                        if (!$assistantCreated) {
+                            \App\Models\Message::create([
+                                'id' => $assistantId,
+                                'chat_id' => $chat->id,
+                                'user_id' => null,
+                                'role' => 'assistant',
+                                'content' => $assistantText,
+                                'metadata' => ['model' => $modelUsed],
+                            ]);
+                            $assistantCreated = true;
+                            $lastPersistLen = strlen($assistantText);
+                        } else {
+                            // Persist every ~512 chars to avoid data loss on disconnect
+                            if (strlen($assistantText) - $lastPersistLen >= 512) {
+                                \App\Models\Message::where('id', $assistantId)->update([
+                                    'content' => $assistantText,
+                                ]);
+                                $lastPersistLen = strlen($assistantText);
+                            }
+                        }
                     }
                     if (data_get($evt, 'model')) {
                         $modelUsed = (string) data_get($evt, 'model');
@@ -192,14 +218,32 @@ class MessageController extends Controller
                 }
             }
 
-            Message::create([
-                'id' => $assistantId,
-                'chat_id' => $chat->id,
-                'user_id' => null,
-                'role' => 'assistant',
-                'content' => $assistantText,
-                'metadata' => ['model' => $modelUsed],
-            ]);
+            if ($assistantCreated) {
+                // Final update with full content and model used
+                \App\Models\Message::where('id', $assistantId)->update([
+                    'content' => $assistantText,
+                    'metadata' => ['model' => $modelUsed],
+                ]);
+            } else {
+                // No token streamed (edge case); still create an empty assistant message
+                \App\Models\Message::create([
+                    'id' => $assistantId,
+                    'chat_id' => $chat->id,
+                    'user_id' => null,
+                    'role' => 'assistant',
+                    'content' => $assistantText,
+                    'metadata' => ['model' => $modelUsed],
+                ]);
+                $assistantCreated = true;
+            }
+
+            // Generate a better title from the start of the conversation if still empty
+            if (empty($chat->title)) {
+                try {
+                    $chat->title = \App\Support\Title::generateFromChatStart($chat, $modelUsed);
+                    $chat->save();
+                } catch (\Throwable $e) { /* ignore */ }
+            }
         }, 200, [
             'Content-Type' => 'text/event-stream',
             'Cache-Control' => 'no-cache, no-transform',
