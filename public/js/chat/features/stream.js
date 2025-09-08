@@ -9,7 +9,9 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
   if (!text) return;
   await createChatIfNeeded();
 
-  messagesEl.appendChild(messageBubble('user', text));
+  const cur = (state.chatsCache || []).find(c=>c.id===state.currentChatId);
+  const chatTitle = cur?.title || 'Untitled';
+  messagesEl.appendChild(messageBubble('user', text, null, { chatTitle }));
   messagesEl.scrollTop = messagesEl.scrollHeight;
   composer.value = '';
   composer.style.height = 'auto';
@@ -18,12 +20,27 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
   const prevInner = sendBtn.innerHTML; sendBtn.dataset.prev = prevInner;
   sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
   try {
-    const assistant = messageBubble('assistant', '');
+    const assistant = messageBubble('assistant', '', null, { chatTitle });
     messagesEl.appendChild(assistant);
     messagesEl.scrollTop = messagesEl.scrollHeight;
-    const thinking = el('div','flex items-center gap-2 text-sm text-slate-500');
-    thinking.innerHTML = '<span class="inline-flex w-2 h-2 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.2s]"></span><span class="inline-flex w-2 h-2 rounded-full bg-slate-400 animate-bounce"></span><span class="inline-flex w-2 h-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.2s]"></span>';
-    assistant._contentEl.appendChild(thinking); assistant._thinkingEl = thinking;
+
+    // Hide toolbar while waiting for first token
+    if (assistant._toolbar){ assistant._toolbar.style.display = 'none'; }
+
+    // Loader + timer until first token arrives
+    const waitStart = performance.now();
+    const thinking = el('div','inline-block');
+    const loaderBox = el('div','relative inline-block align-middle three-body-wrap');
+    loaderBox.innerHTML = '<div class="three-body"><div class="three-body__dot"></div><div class="three-body__dot"></div><div class="three-body__dot"></div></div>';
+    const timer = el('div','three-body-timer select-none','0.0s');
+    loaderBox.appendChild(timer);
+    thinking.appendChild(loaderBox);
+    assistant._contentEl.appendChild(thinking);
+    assistant._thinkingEl = thinking;
+    assistant._waitTimer = setInterval(()=>{
+      const s = (performance.now() - waitStart)/1000;
+      timer.textContent = s.toFixed(1) + 's';
+    }, 100);
 
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     const r = await fetch('/api/messages/stream', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin', body: JSON.stringify({ chat_id: state.currentChatId, role: 'user', content: text }) });
@@ -63,7 +80,21 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
         const json = chunk.slice(5).trim();
         try {
           const evt = JSON.parse(json);
-          if (evt.delta) { if (assistant._thinkingEl) { assistant._thinkingEl.remove(); assistant._thinkingEl = null; } smoothQueue += evt.delta; scheduleRender(); }
+          if (evt.delta) {
+            if (assistant._thinkingEl) {
+              assistant._thinkingEl.remove(); assistant._thinkingEl = null;
+              if (assistant._waitTimer) { clearInterval(assistant._waitTimer); assistant._waitTimer = null; }
+            }
+            // Show toolbar on first token
+            if (assistant._toolbar){ assistant._toolbar.style.display = ''; }
+            // Show first-token latency outside the bubble (top-left)
+            if (assistant._latencyEl){
+              const s = (performance.now() - waitStart)/1000;
+              assistant._latencyEl.textContent = s.toFixed(1) + 's';
+              assistant._latencyEl.classList.remove('hidden');
+            }
+            smoothQueue += evt.delta; scheduleRender();
+          }
           if (evt.done) { scheduleRender(); }
         } catch {}
       }
@@ -76,4 +107,3 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
     sendBtn.disabled = false; sendBtn.innerHTML = sendBtn.dataset.prev || '<i class="fa-regular fa-paper-plane"></i>';
   }
 }
-

@@ -45,7 +45,9 @@ async function loadMessages(){
   const { messagesEl } = elements; if (!state.currentChatId){ messagesEl.innerHTML=''; return; }
   const msgs = await apiGet(`/api/chats/${state.currentChatId}/messages`);
   messagesEl.innerHTML=''; if (msgs.length===0) messagesEl.appendChild(renderEmptyState());
-  msgs.forEach(m=> messagesEl.appendChild(messageBubble(m.role, m.content, m.metadata)));
+  const cur = (state.chatsCache || []).find(c=>c.id===state.currentChatId);
+  const chatTitle = cur?.title || 'Untitled';
+  msgs.forEach(m=> messagesEl.appendChild(messageBubble(m.role, m.content, m.metadata, { chatTitle })));
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
@@ -75,9 +77,11 @@ async function bootstrap(){
     const dot = document.getElementById('authDot');
     const text = document.getElementById('authText');
     const authStatus = document.querySelector('meta[name="auth-status"]')?.getAttribute('content') || 'guest';
+    const email = document.querySelector('meta[name="auth-email"]')?.getAttribute('content') || '';
+    const role = document.querySelector('meta[name="auth-role"]')?.getAttribute('content') || '';
     const isAuth = authStatus === 'auth';
     if (dot) dot.className = 'inline-flex h-2 w-2 rounded-full ' + (isAuth ? 'bg-emerald-500' : 'bg-red-500');
-    if (text) text.textContent = isAuth ? 'Signed in' : 'Not signed in';
+    if (text) text.textContent = isAuth ? `${email ? email + ' ' : ''}Signed in${role ? ' ('+role+')' : ''}` : 'Not signed in';
   }
   // models
   try{
@@ -88,7 +92,13 @@ async function bootstrap(){
   updateAuthStatus();
 
   // events
-  elements.newChatBtn.addEventListener('click', async ()=>{ state.currentChatId=null; await createChatIfNeeded(); elements.messagesEl.innerHTML=''; await updateAuthStatus(); });
+  elements.newChatBtn.addEventListener('click', async ()=>{
+    state.currentChatId = null;
+    await createChatIfNeeded();
+    await loadMessages();
+    await loadChats();
+    updateAuthStatus();
+  });
   elements.sendBtn.addEventListener('click', ()=> sendMessage(state,{ createChatIfNeeded, loadMessages, loadChats }));
   elements.composer.addEventListener('keydown', (e)=>{ if (e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(state,{ createChatIfNeeded, loadMessages, loadChats }); }});
   elements.modelSelect.addEventListener('change', async ()=>{ if (state.currentChatId){ try{ await apiPatch(`/api/chats/${state.currentChatId}`, { settings:{ model: elements.modelSelect.value } }); await loadChats(); }catch(e){ console.error('Failed to update chat model', e); } }});
