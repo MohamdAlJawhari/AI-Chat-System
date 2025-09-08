@@ -28,8 +28,12 @@ Route::middleware('auth')->prefix('api')->group(function(){
 
     // Admin user management
     Route::get('/admin/users', [UserAdminController::class, 'index']);
+    Route::post('/admin/users', [UserAdminController::class, 'store']);
     Route::post('/admin/users/{user}/block', [UserAdminController::class, 'block']);
     Route::post('/admin/users/{user}/unblock', [UserAdminController::class, 'unblock']);
+    Route::post('/admin/users/{user}/make-admin', [UserAdminController::class, 'makeAdmin']);
+    Route::post('/admin/users/{user}/make-user', [UserAdminController::class, 'makeUser']);
+    Route::delete('/admin/users/{user}', [UserAdminController::class, 'destroy']);
 });
 
 // Public models list
@@ -50,3 +54,12 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+// Admin Control page (UI)
+Route::middleware('auth')->get('/admin', function () {
+    $u = auth()->user();
+    if (!$u || $u->role !== 'admin') {
+        abort(403, 'Admin only');
+    }
+    return view('admin.control');
+})->name('admin.control');

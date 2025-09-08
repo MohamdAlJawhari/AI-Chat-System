@@ -30,9 +30,11 @@ function initUserMenu(){
   menu.innerHTML = '';
   if (authStatus === 'auth') {
     const profile = document.createElement('a'); profile.href='/profile'; profile.className='block px-3 py-2 hover:bg-slate-100 dark:hover:bg-neutral-800'; profile.textContent='Profile';
+    const role = document.querySelector('meta[name="auth-role"]')?.getAttribute('content') || '';
+    const admin = document.createElement('a'); if (role.toLowerCase()==='admin'){ admin.href='/admin'; admin.className='block px-3 py-2 hover:bg-slate-100 dark:hover:bg-neutral-800'; admin.textContent='Admin Control'; }
     const form = document.createElement('form'); form.method='POST'; form.action='/logout'; form.innerHTML=`<input type=\"hidden\" name=\"_token\" value=\"${csrf}\">`;
     const outBtn = document.createElement('button'); outBtn.type='submit'; outBtn.className='w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-neutral-800'; outBtn.textContent='Sign out';
-    form.appendChild(outBtn); menu.append(profile, form);
+    form.appendChild(outBtn); menu.append(profile, ...(admin.href? [admin] : []), form);
   } else {
     const li = document.createElement('a'); li.href='/login'; li.className='block px-3 py-2 hover:bg-slate-100 dark:hover:bg-neutral-800'; li.textContent='Sign in';
     const rg = document.createElement('a'); rg.href='/register'; rg.className='block px-3 py-2 hover:bg-slate-100 dark:hover:bg-neutral-800'; rg.textContent='Create account';
