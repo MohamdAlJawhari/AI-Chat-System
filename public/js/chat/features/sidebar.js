@@ -1,3 +1,7 @@
+/**
+ * Sidebar behavior: resize via divider, collapse/expand and persistence.
+ * Stores width/hidden state in localStorage.
+ */
 import { elements } from '../core/dom.js';
 
 export function initSidebar(state) {
@@ -53,4 +57,3 @@ export function initSidebar(state) {
 
   return { hideSidebar, setSidebarWidth };
 }
-

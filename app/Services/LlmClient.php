@@ -7,9 +7,11 @@ use Illuminate\Support\Facades\Http;
 class LlmClient
 {
     /**
+     * Call Ollama chat endpoint and return assistant text.
+     *
      * @param array $messages  e.g. [['role'=>'system','content'=>'...'], ['role'=>'user','content'=>'...']]
-     * @param string|null $model  override model name if needed
-     * @param array $options  extra ollama params (temperature, etc.)
+     * @param string|null $model Optional override for model name
+     * @param array $options  Extra params for Ollama (temperature, etc.)
      */
     public function chat(array $messages, ?string $model = null, array $options = []): string
     {
@@ -29,6 +31,7 @@ class LlmClient
         return data_get($json, 'message.content', '');
     }
 
+    /** Query Ollama for available model tags. */
     public function listModels(): array
     {
         $base = rtrim((string) config('llm.base_url'), '/');

@@ -51,6 +51,7 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
     let buffer = '';
     let renderQueued = false;
     let smoothQueue = '';
+    // Batch DOM writes for smoother rendering while streaming
     const scheduleRender = () => {
       if (renderQueued) return; renderQueued = true;
       requestAnimationFrame(() => {
@@ -106,4 +107,12 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
   } finally {
     sendBtn.disabled = false; sendBtn.innerHTML = sendBtn.dataset.prev || '<i class="fa-regular fa-paper-plane"></i>';
   }
+/**
+ * Streaming send: persists the user message, shows a loader with first-token timer,
+ * then incrementally renders assistant tokens from a server-sent event stream.
+ *
+ * Notes:
+ * - While waiting for the first token we hide the toolbar and show the 3-dot loader.
+ * - On first token we restore the assistant UI and reveal the toolbar with latency.
+ */
 }

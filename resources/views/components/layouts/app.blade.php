@@ -49,9 +49,33 @@
     <!-- Favicon/logo -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <style id="three-body-style">
-      /* From Uiverse.io by dovatgabriel (adapted + themed) */
-      :root { --accent: #5D3FD3; }
-      html.dark { --accent: #7C5CFF; }
+      /* Theme tokens */
+      :root { --accent: #10B981; --accent-rgb: 16,185,129; }
+      html.dark { --accent: #34D399; --accent-rgb: 52,211,153; }
+
+      /* App background (soft radial glows) */
+      html.dark body { background: radial-gradient(1200px 800px at 70% 30%, rgba(var(--accent-rgb), 0.08), transparent 60%), radial-gradient(800px 600px at 20% 80%, rgba(var(--accent-rgb), 0.06), transparent 70%), #0b0b0d; }
+      html body:not(.dark) { background: radial-gradient(1100px 760px at 70% 20%, rgba(var(--accent-rgb), 0.08), transparent 60%), radial-gradient(800px 520px at 20% 90%, rgba(var(--accent-rgb), 0.06), transparent 70%), #f7f7f8; }
+
+      /* Glass helpers */
+      .glass-panel { background: rgba(17,17,19,0.6); backdrop-filter: saturate(120%) blur(8px); border: 1px solid rgba(148,163,184,0.15); }
+      .glass-panel-light { background: rgba(255,255,255,0.6); backdrop-filter: saturate(120%) blur(8px); border: 1px solid rgba(0,0,0,0.08); }
+
+      /* Slim scrollbars */
+      ::-webkit-scrollbar { width: 10px; height: 10px; }
+      ::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.35); border-radius: 8px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.55); }
+
+      /* Ticker (empty-state) */
+      .uchat-ticker-row { position: relative; overflow: hidden; }
+      .uchat-ticker-track { display: flex; width: max-content; white-space: nowrap; will-change: transform; }
+      .uchat-ticker-seg { padding-inline-end: 2rem; }
+      @keyframes uchat-scroll-ltr { 0%{transform:translateX(0)} 100%{transform:translateX(-15%)} }
+      @keyframes uchat-scroll-rtl { 0%{transform:translateX(0)} 100%{transform:translateX(15%)} }
+      .uchat-anim-ltr { animation: uchat-scroll-ltr 30s linear infinite; }
+      .uchat-anim-rtl { animation: uchat-scroll-rtl 30s linear infinite; }
+
+      /* Spinner (from Uiverse, themed) */
       .three-body { --uib-size: 32px; --uib-speed: 0.8s; --uib-color: var(--accent); position: relative; display: inline-block; height: var(--uib-size); width: var(--uib-size); animation: spin78236 calc(var(--uib-speed) * 2.5) infinite linear; pointer-events: none; }
       .three-body__dot { position: absolute; height: 100%; width: 30%; }
       .three-body__dot:after { content: ''; position: absolute; height: 0%; width: 100%; padding-bottom: 100%; background-color: var(--uib-color); border-radius: 50%; }

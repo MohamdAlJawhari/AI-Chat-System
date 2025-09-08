@@ -101,6 +101,12 @@ Front‑end (vanilla JS ES modules)
     - `ui.js` (bubbles, chat list), `markdown.js`, `emptyState.js`
   - `features/` — self‑contained feature logic
     - `sidebar.js`, `composer.js`, `stream.js`
+
+Conventions
+
+- JS: small modules, clear names, JSDoc where helpful. Avoid global state except `core/state.js`.
+- PHP: thin controllers, docblocks on public endpoints; reusable utility in `app/Support`.
+- Styling: one accent color via CSS vars; light/dark handled in the main layout.
 - Views: Blade components render the layout and slots
   - Layout: `resources/views/components/layouts/app.blade.php`
   - Chat page: `resources/views/chat.blade.php`

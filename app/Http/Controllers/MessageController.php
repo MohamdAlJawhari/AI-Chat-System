@@ -9,9 +9,14 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Support\Text;
 
+/**
+ * Message endpoints: list messages, create message (non-stream), and
+ * streaming endpoint that proxies model output while persisting messages.
+ */
 class MessageController extends Controller
 {
 
+    /** Return messages for a chat (oldest first). */
     public function index(Chat $chat)
     {
         $messages = $chat->messages()
@@ -21,6 +26,7 @@ class MessageController extends Controller
         return response()->json($messages);
     }
 
+    /** Create a message and, for user role, append an assistant reply via the LLM. */
     public function store(Request $request)
     {
         $request->validate([
@@ -85,6 +91,12 @@ class MessageController extends Controller
         ], 201);
     }
 
+    /**
+     * Streaming variant used by the UI:
+     * - Saves the user message
+     * - Emits SSE {delta} chunks until {done}
+     * - Persists the assistant message on completion
+     */
     public function storeStream(Request $request)
     {
         $request->validate([

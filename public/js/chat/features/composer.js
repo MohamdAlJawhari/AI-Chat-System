@@ -1,6 +1,11 @@
+/**
+ * Composer auto-resize and direction handling.
+ * Grows the textarea to fit content (up to a cap) and applies LTR/RTL.
+ */
 import { elements } from '../core/dom.js';
 import { applyDirection } from '../core/rtl.js';
 
+/** Initialize the composer behavior. */
 export function initComposer(){
   const { composer } = elements;
   function update(){
@@ -12,4 +17,3 @@ export function initComposer(){
   composer.addEventListener('input', update);
   update();
 }
-

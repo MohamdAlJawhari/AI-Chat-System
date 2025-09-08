@@ -7,6 +7,7 @@ import { renderEmptyState } from './ui/emptyState.js';
 import { initComposer } from './features/composer.js';
 import { sendMessage } from './features/stream.js';
 
+/** Set UI theme (dark|light) and sync icon + Mermaid theme. */
 function setTheme(mode){
   if (mode === 'dark') document.documentElement.classList.add('dark');
   else document.documentElement.classList.remove('dark');
@@ -15,8 +16,10 @@ function setTheme(mode){
   if (icon) icon.className = mode === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
   if (window.mermaid){ try{ mermaid.initialize({ startOnLoad:false, theme: mode==='dark'?'dark':'default' }); }catch{} }
 }
+/** Initialize theme using stored choice or OS preference. */
 function initTheme(){ const t = localStorage.getItem('theme'); const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; setTheme(t || (prefersDark ? 'dark' : 'light')); }
 
+/** Build a small user dropdown using session status and CSRF token. */
 function initUserMenu(){
   const btn = document.getElementById('userBtn');
   const menu = document.getElementById('userMenu');
@@ -41,6 +44,10 @@ function initUserMenu(){
   btn.addEventListener('click', (e)=>{ e.stopPropagation(); if (menu.classList.contains('hidden')) open(); else close(); });
 }
 
+/**
+ * Fetch and render messages for the active chat.
+ * Renders an empty-state if the chat has no messages.
+ */
 async function loadMessages(){
   const { messagesEl } = elements; if (!state.currentChatId){ messagesEl.innerHTML=''; return; }
   const msgs = await apiGet(`/api/chats/${state.currentChatId}/messages`);
@@ -51,6 +58,10 @@ async function loadMessages(){
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
+/**
+ * Fetch and render the chat list.
+ * Selects the first chat if none is active; also syncs model dropdown.
+ */
 async function loadChats(){
   const chats = await apiGet('/api/chats'); state.chatsCache = chats;
   const { chatListEl, modelSelect } = elements; chatListEl.innerHTML='';
@@ -68,11 +79,14 @@ async function loadChats(){
   return chats;
 }
 
+/** Ensure a chat exists and return its id (creates a new one if needed). */
 async function createChatIfNeeded(){ if (state.currentChatId) return state.currentChatId; const chat = await apiPost('/api/chats',{ settings:{ model: elements.modelSelect.value }}); state.currentChatId = chat.id; await loadChats(); return state.currentChatId; }
 
+/** Main boot function that wires up everything. */
 async function bootstrap(){
   initTheme(); initSidebar(state); initComposer(); initUserMenu();
   // Auth status (session-based)
+  /** Update the small status label in the sidebar. */
   function updateAuthStatus(){
     const dot = document.getElementById('authDot');
     const text = document.getElementById('authText');
@@ -93,6 +107,12 @@ async function bootstrap(){
 
   // events
   elements.newChatBtn.addEventListener('click', async ()=>{
+/**
+ * Chat app entrypoint.
+ * - Bootstraps theme, sidebar, composer, and user menu.
+ * - Loads chats/messages and wires UI events.
+ * - Uses small, focused modules under ./core, ./features, ./ui, ./api.
+ */
     state.currentChatId = null;
     await createChatIfNeeded();
     await loadMessages();

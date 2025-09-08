@@ -58,12 +58,19 @@ async function copyTextToClipboard(text){
   }
 }
 
+/**
+ * Create a message bubble.
+ * @param {'user'|'assistant'} role
+ * @param {string|null} content
+ * @param {object|null} metadata
+ * @param {{chatTitle?: string}} opts
+ */
 export function messageBubble(role, content, metadata = null, opts = {}) {
   const wrap = el('div', 'group relative flex ' + (role === 'user' ? 'justify-end' : 'justify-start'));
   if (role !== 'user') wrap.classList.add('pb-6');
   const bubble = el('div', (
     role === 'user'
-      ? 'relative max-w-[80%] rounded-2xl px-4 py-2 text-sm bg-blue-600 text-white whitespace-pre-wrap'
+      ? 'relative max-w-[80%] rounded-2xl px-4 py-2 text-sm bg-[var(--accent)] text-white whitespace-pre-wrap'
       : 'relative max-w-[80%] text-sm px-0 py-0 bg-transparent'
   ));
   const contentEl = el('div', 'rich');
@@ -116,7 +123,13 @@ export function messageBubble(role, content, metadata = null, opts = {}) {
   return wrap;
 }
 
+/** Create a chat list row with select/rename/delete actions. */
 export function chatItem(chat, { onSelect, onRename, onDelete, active }) {
+/**
+ * UI widgets: messageBubble + chatItem.
+ * - messageBubble supports user/assistant styles, streaming, and an external toolbar
+ *   with time + copy + download for assistant messages.
+ */
   const row = el('div', 'group flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-neutral-800');
   if (active) row.classList.add('bg-slate-200','dark:bg-neutral-800');
   const btn = el('button', 'flex-1 text-left px-1 py-1'); btn.textContent = chat.title || 'Untitled'; btn.onclick = () => onSelect(chat.id);

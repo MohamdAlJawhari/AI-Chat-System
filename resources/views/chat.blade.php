@@ -9,6 +9,11 @@
         </main>
     </div>
 
+    <!-- Template used by JS to render the empty-state block when a chat has no messages -->
+    <template id="empty-state-template">
+        <x-chat.empty-state :show-auth-cta="false" />
+    </template>
+
     <x-slot name="scripts">
         @php($__main_ver = @filemtime(public_path('js/chat/main.js')) ?: time())
         <script type="module" src="/js/chat/main.js?v={{ $__main_ver }}"></script>

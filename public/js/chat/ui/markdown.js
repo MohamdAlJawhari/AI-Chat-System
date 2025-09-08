@@ -1,5 +1,6 @@
 import { escapeHtml } from '../core/util.js';
 
+/** Render sanitized HTML from markdown input. */
 export function renderSafeMarkdown(text) {
   try {
     if (window.marked) {
@@ -22,6 +23,7 @@ export function renderSafeMarkdown(text) {
   }
 }
 
+/** Apply utility classes for tables/blocks/links and init Mermaid diagrams. */
 export function styleRichContent(container) {
   container.querySelectorAll('table').forEach(t => {
     t.classList.add('w-full','text-sm','border-collapse','my-2');
@@ -59,6 +61,9 @@ function convertMarkdownTables(md){
       out.push(html);
     } else out.push(escapeHtml(h));
   }
+/**
+ * Markdown rendering helpers with DOMPurify sanitation.
+ * Falls back to a tiny table converter if marked.js is not available.
+ */
   return out.join('\n');
 }
-
