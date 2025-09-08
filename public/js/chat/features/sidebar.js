@@ -1,4 +1,4 @@
-import { elements } from './dom.js';
+import { elements } from '../core/dom.js';
 
 export function initSidebar(state) {
   const sidebar = elements.sidebar;

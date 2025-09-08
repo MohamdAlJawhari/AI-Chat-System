@@ -1,11 +1,11 @@
-import { elements } from './dom.js';
-import { state } from './state.js';
-import { initSidebar } from './sidebar.js';
-import { apiGet, apiPost, apiPatch, apiDelete } from './api.js';
-import { messageBubble, chatItem } from './ui.js';
-import { renderEmptyState } from './emptyState.js';
-import { initComposer } from './composer.js';
-import { sendMessage } from './stream.js';
+import { elements } from './core/dom.js';
+import { state } from './core/state.js';
+import { initSidebar } from './features/sidebar.js';
+import { apiGet, apiPost, apiPatch, apiDelete } from './api/api.js';
+import { messageBubble, chatItem } from './ui/ui.js';
+import { renderEmptyState } from './ui/emptyState.js';
+import { initComposer } from './features/composer.js';
+import { sendMessage } from './features/stream.js';
 
 function setTheme(mode){
   if (mode === 'dark') document.documentElement.classList.add('dark');

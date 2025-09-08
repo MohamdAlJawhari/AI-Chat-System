@@ -1,7 +1,7 @@
-import { elements, el } from './dom.js';
-import { renderSafeMarkdown, styleRichContent } from './markdown.js';
-import { applyDirection } from './rtl.js';
-import { messageBubble } from './ui.js';
+import { elements, el } from '../core/dom.js';
+import { renderSafeMarkdown, styleRichContent } from '../ui/markdown.js';
+import { applyDirection } from '../core/rtl.js';
+import { messageBubble } from '../ui/ui.js';
 
 export async function sendMessage(state, { createChatIfNeeded, loadMessages, loadChats }){
   const { messagesEl, composer, sendBtn } = elements;
@@ -76,3 +76,4 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
     sendBtn.disabled = false; sendBtn.innerHTML = sendBtn.dataset.prev || '<i class="fa-regular fa-paper-plane"></i>';
   }
 }
+

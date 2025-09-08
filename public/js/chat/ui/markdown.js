@@ -1,4 +1,4 @@
-import { escapeHtml } from './util.js';
+import { escapeHtml } from '../core/util.js';
 
 export function renderSafeMarkdown(text) {
   try {

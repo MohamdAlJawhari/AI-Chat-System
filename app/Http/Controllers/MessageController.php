@@ -4,19 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Chat;
 use App\Models\Message;
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use App\Support\Text;
 
 class MessageController extends Controller
 {
-    private function summarizeTitle(string $text): string
-    {
-        $line = preg_split('/\r?\n/', trim($text))[0] ?? '';
-        $line = trim($line, " \t\-–—•:.");
-        return \Illuminate\Support\Str::limit($line !== '' ? $line : 'New chat', 60, '…');
-    }
 
     public function index(Chat $chat)
     {
@@ -56,7 +50,7 @@ class MessageController extends Controller
 
         // Generate a title from the first user message if missing
         if (empty($chat->title) && $request->filled('content')) {
-            $chat->title = $this->summarizeTitle((string) $request->input('content'));
+            $chat->title = Text::summarizeTitle((string) $request->input('content'));
             $chat->save();
         }
 
@@ -111,7 +105,7 @@ class MessageController extends Controller
 
         $chat = Chat::findOrFail($request->chat_id);
         if (empty($chat->title)) {
-            $chat->title = $this->summarizeTitle((string) $request->input('content'));
+            $chat->title = Text::summarizeTitle((string) $request->input('content'));
             $chat->save();
         }
 

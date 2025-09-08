@@ -1,5 +1,5 @@
-import { el } from './dom.js';
-import { applyDirection } from './rtl.js';
+import { el } from '../core/dom.js';
+import { applyDirection } from '../core/rtl.js';
 import { renderSafeMarkdown, styleRichContent } from './markdown.js';
 
 export function messageBubble(role, content, metadata = null) {
@@ -32,3 +32,4 @@ export function chatItem(chat, { onSelect, onRename, onDelete, active }) {
   row.append(btn, rename, del);
   return row;
 }
+

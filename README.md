@@ -92,23 +92,19 @@ Back‑end (Laravel)
 Front‑end (vanilla JS ES modules)
 
 - Entry point: `public/js/chat/main.js` (bootstraps UI, loads data)
-- Modules: `public/js/chat/`
-  - `api.js` — fetch wrappers with token + 401 retry
-  - `auth.js` — token storage, login/register/logout
-  - `authUI.js` — user menu + modal (login/sign‑up)
-  - `stream.js` — streaming send (SSE), smooth renderer
-  - `ui.js` — message bubbles, chat list items
-  - `emptyState.js` — signed‑out welcome state (CTAs)
-  - `markdown.js` — Markdown + sanitize + Mermaid
-  - `rtl.js` — direction detection and application
-  - `sidebar.js` — resize + collapse behavior
-  - `composer.js` — auto‑resize + RTL for the input
-  - `dom.js`, `state.js`, `util.js` — helpers
+- Modules grouped by concern under `public/js/chat/`:
+  - `core/` — low‑level helpers and state
+    - `dom.js`, `state.js`, `rtl.js`, `util.js`
+  - `api/` — HTTP utilities
+    - `api.js` (fetch wrappers, CSRF, 401 handling)
+  - `ui/` — presentation helpers
+    - `ui.js` (bubbles, chat list), `markdown.js`, `emptyState.js`
+  - `features/` — self‑contained feature logic
+    - `sidebar.js`, `composer.js`, `stream.js`
 - Views: Blade components render the layout and slots
   - Layout: `resources/views/components/layouts/app.blade.php`
   - Chat page: `resources/views/chat.blade.php`
   - Chat components: `resources/views/components/chat/*`
-  - Auth modal: `resources/views/components/auth/modal.blade.php`
 
 ## API Reference (selected)
 
@@ -171,4 +167,3 @@ Headers
 ## License
 
 This project is provided as‑is, without warranty. Add a license file if you plan to distribute it.
-

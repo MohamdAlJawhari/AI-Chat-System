@@ -1,5 +1,5 @@
-import { elements } from './dom.js';
-import { applyDirection } from './rtl.js';
+import { elements } from '../core/dom.js';
+import { applyDirection } from '../core/rtl.js';
 
 export function initComposer(){
   const { composer } = elements;

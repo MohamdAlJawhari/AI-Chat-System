@@ -1,4 +1,4 @@
-import { el } from './dom.js';
+import { el } from '../core/dom.js';
 
 export function renderEmptyState(showAuthCta = false) {
   // Inject ticker CSS once (seamless infinite loop via duplicated segments)
@@ -98,3 +98,4 @@ export function renderTickerOnly(){
   box.appendChild(buildTicker({ dir:'rtl', text: arText, animClass:'uchat-anim-rtl' }));
   return box;
 }
+
