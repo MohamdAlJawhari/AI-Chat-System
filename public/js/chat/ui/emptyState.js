@@ -10,7 +10,7 @@ export function renderEmptyState(){
     if (first) return first.cloneNode(true);
   }
   const div = document.createElement('div');
-  div.className = 'mx-auto max-w-3xl mt-8 text-center text-sm text-neutral-400';
+  div.className = 'mx-auto max-w-3xl mt-8 text-center text-sm text-neutral-400 uchat-empty-state';
   div.textContent = 'Start by asking a question…';
   return div;
 }
@@ -34,4 +34,3 @@ export function renderTickerOnly(){
   box.appendChild(buildTicker({ dir:'rtl', text: arText, animClass:'uchat-anim-rtl' }));
   return box;
 }
-

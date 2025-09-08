@@ -16,13 +16,14 @@
     <!-- Tailwind (CDN for dev) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        // Tailwind palette aliases used in a few utility classes
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        bg: { DEFAULT: '#0b0b0d', soft: '#111113' },
-                        panel: '#0f1012',
+                        bg: { DEFAULT: '#121212', soft: '#1a1a1a' },
+                        panel: '#1a1a1a',
                     }
                 }
             }
@@ -50,16 +51,43 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <style id="three-body-style">
       /* Theme tokens */
-      :root { --accent: #10B981; --accent-rgb: 16,185,129; }
-      html.dark { --accent: #34D399; --accent-rgb: 52,211,153; }
+      :root {
+        --bg-light: #FFFFFF; /* light background */
+        --text-light: #2E2E2E; /* light text */
+        --accent-light: #3A4D7A; /* light accent */
+        --bg-dark: #121212; /* dark background */
+        --text-dark: #E0E0E0; /* dark text */
+        --accent-dark: #5C7AEA; /* dark accent */
 
-      /* App background (soft radial glows) */
-      html.dark body { background: radial-gradient(1200px 800px at 70% 30%, rgba(var(--accent-rgb), 0.08), transparent 60%), radial-gradient(800px 600px at 20% 80%, rgba(var(--accent-rgb), 0.06), transparent 70%), #0b0b0d; }
-      html body:not(.dark) { background: radial-gradient(1100px 760px at 70% 20%, rgba(var(--accent-rgb), 0.08), transparent 60%), radial-gradient(800px 520px at 20% 90%, rgba(var(--accent-rgb), 0.06), transparent 70%), #f7f7f8; }
+        /* Active tokens (switch with .dark) */
+        --bg: var(--bg-light);
+        --text: var(--text-light);
+        --accent: var(--accent-light);
+        --accent-rgb: 58,77,122; /* #3A4D7A */
+        --border-muted: rgba(46,46,46,0.12);
+        --surface: rgba(0,0,0,0.04);
+      }
+      html.dark {
+        --bg: var(--bg-dark);
+        --text: var(--text-dark);
+        --accent: var(--accent-dark);
+        --accent-rgb: 92,122,234; /* #5C7AEA */
+        --border-muted: rgba(224,224,224,0.12);
+        --surface: rgba(255,255,255,0.06);
+      }
 
-      /* Glass helpers */
-      .glass-panel { background: rgba(17,17,19,0.6); backdrop-filter: saturate(120%) blur(8px); border: 1px solid rgba(148,163,184,0.15); }
-      .glass-panel-light { background: rgba(255,255,255,0.6); backdrop-filter: saturate(120%) blur(8px); border: 1px solid rgba(0,0,0,0.08); }
+      /* Base page colors */
+      body { background: var(--bg) !important; color: var(--text) !important; }
+
+      /* Soft backdrop with accent glow */
+      html.dark body { background-image: radial-gradient(1200px 800px at 70% 30%, rgba(var(--accent-rgb), 0.08), transparent 60%), radial-gradient(800px 600px at 20% 80%, rgba(var(--accent-rgb), 0.06), transparent 70%); background-color: var(--bg); }
+      html body:not(.dark) { background-image: radial-gradient(1100px 760px at 70% 20%, rgba(var(--accent-rgb), 0.08), transparent 60%), radial-gradient(800px 520px at 20% 90%, rgba(var(--accent-rgb), 0.06), transparent 70%); background-color: var(--bg); }
+
+      /* Surfaces and borders */
+      .glass-panel { background: var(--surface); backdrop-filter: saturate(120%) blur(8px); border: 1px solid var(--border-muted); }
+      .glass-panel-light { background: rgba(255,255,255,0.6); backdrop-filter: saturate(120%) blur(8px); border: 1px solid var(--border-muted); }
+      .border-muted { border-color: var(--border-muted); }
+      .text-muted { color: color-mix(in srgb, var(--text) 70%, transparent); }
 
       /* Slim scrollbars */
       ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -70,6 +98,7 @@
       .uchat-ticker-row { position: relative; overflow: hidden; }
       .uchat-ticker-track { display: flex; width: max-content; white-space: nowrap; will-change: transform; }
       .uchat-ticker-seg { padding-inline-end: 2rem; }
+      .uchat-ticker-gap { display:inline-block; min-width: 6rem; }
       @keyframes uchat-scroll-ltr { 0%{transform:translateX(0)} 100%{transform:translateX(-15%)} }
       @keyframes uchat-scroll-rtl { 0%{transform:translateX(0)} 100%{transform:translateX(15%)} }
       .uchat-anim-ltr { animation: uchat-scroll-ltr 30s linear infinite; }
@@ -98,7 +127,7 @@
     {{ $head ?? '' }}
     @stack('styles')
 </head>
-<body class="h-screen bg-white text-slate-900 dark:bg-bg dark:text-gray-100">
+<body class="h-screen">
     {{ $slot }}
     {{ $scripts ?? '' }}
     @stack('scripts')

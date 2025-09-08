@@ -121,8 +121,9 @@ async function bootstrap(){
     await loadChats();
     updateAuthStatus();
   });
-  elements.sendBtn.addEventListener('click', ()=> sendMessage(state,{ createChatIfNeeded, loadMessages, loadChats }));
-  elements.composer.addEventListener('keydown', (e)=>{ if (e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(state,{ createChatIfNeeded, loadMessages, loadChats }); }});
+  const removeEmptyState = ()=>{ try{ const es = document.querySelector('#messages .uchat-empty-state'); if (es) es.remove(); }catch{} };
+  elements.sendBtn.addEventListener('click', ()=>{ removeEmptyState(); sendMessage(state,{ createChatIfNeeded, loadMessages, loadChats }); });
+  elements.composer.addEventListener('keydown', (e)=>{ if (e.key==='Enter' && !e.shiftKey){ e.preventDefault(); removeEmptyState(); sendMessage(state,{ createChatIfNeeded, loadMessages, loadChats }); }});
   elements.modelSelect.addEventListener('change', async ()=>{ if (state.currentChatId){ try{ await apiPatch(`/api/chats/${state.currentChatId}`, { settings:{ model: elements.modelSelect.value } }); await loadChats(); }catch(e){ console.error('Failed to update chat model', e); } }});
   if (elements.themeToggle){ elements.themeToggle.addEventListener('click', ()=>{ const isDark = document.documentElement.classList.contains('dark'); setTheme(isDark ? 'light' : 'dark'); }); }
   window.addEventListener('keydown', async (e)=>{ const k = e.key?e.key.toLowerCase():''; if ((e.ctrlKey||e.metaKey) && k==='n'){ e.preventDefault(); state.currentChatId=null; await createChatIfNeeded(); await loadMessages(); await loadChats(); }});

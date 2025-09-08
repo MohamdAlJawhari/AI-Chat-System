@@ -11,46 +11,46 @@
             </div>
 
             <!-- Create User Panel -->
-            <div class="mb-6 rounded-lg border border-slate-800/40 bg-panel/60 p-4 shadow-sm glass-panel dark:glass-panel">
+            <div class="mb-6 rounded-lg p-4 shadow-sm glass-panel">
                 <h2 class="mb-3 text-lg font-medium">Create User</h2>
                 <form id="create-user-form" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <div>
                         <label class="block text-xs mb-1 text-slate-400">Name</label>
-                        <input type="text" name="name" class="w-full rounded-md border border-slate-700/40 bg-black/20 px-3 py-2 outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Jane Doe" required />
+                        <input type="text" name="name" class="w-full rounded-md px-3 py-2 outline-none focus:ring-1" style="background: var(--surface); border: 1px solid var(--border-muted)" placeholder="Jane Doe" required />
                     </div>
                     <div>
                         <label class="block text-xs mb-1 text-slate-400">Email</label>
-                        <input type="email" name="email" class="w-full rounded-md border border-slate-700/40 bg-black/20 px-3 py-2 outline-none focus:ring-1 focus:ring-emerald-500" placeholder="jane@example.com" required />
+                        <input type="email" name="email" class="w-full rounded-md px-3 py-2 outline-none focus:ring-1" style="background: var(--surface); border: 1px solid var(--border-muted)" placeholder="jane@example.com" required />
                     </div>
                     <div>
                         <label class="block text-xs mb-1 text-slate-400">Role</label>
-                        <select name="role" class="w-full rounded-md border border-slate-700/40 bg-black/20 px-3 py-2 outline-none focus:ring-1 focus:ring-emerald-500">
+                        <select name="role" class="w-full rounded-md px-3 py-2 outline-none focus:ring-1" style="background: var(--surface); border: 1px solid var(--border-muted)">
                             <option value="user">User</option>
                             <option value="admin">Admin</option>
                         </select>
                     </div>
                     <div class="flex items-end">
                         <label class="inline-flex items-center gap-2 text-sm">
-                            <input type="checkbox" name="send_reset" class="rounded border-slate-700/40 bg-black/20" checked />
+                            <input type="checkbox" name="send_reset" class="rounded" style="border: 1px solid var(--border-muted); background: var(--surface)" checked />
                             <span>Send set‑password email</span>
                         </label>
                     </div>
                     <div class="sm:col-span-2 lg:col-span-4 flex items-center justify-between gap-3 pt-1">
                         <div id="create-user-result" class="text-sm"></div>
-                        <button type="submit" class="rounded-md border border-emerald-500/40 px-3 py-2 text-sm font-medium text-emerald-400 hover:bg-emerald-500/10">Create</button>
+                        <button type="submit" class="rounded-md px-3 py-2 text-sm font-medium text-white" style="background: var(--accent)">Create</button>
                     </div>
                 </form>
             </div>
 
-            <div id="admin-users-panel" class="rounded-lg border border-slate-800/40 bg-panel/60 p-4 shadow-sm glass-panel dark:glass-panel">
+            <div id="admin-users-panel" class="rounded-lg p-4 shadow-sm glass-panel">
                 <div class="mb-4 flex items-center justify-between">
                     <h2 class="text-lg font-medium">Users</h2>
-                    <div class="text-sm text-slate-400" id="user-count">Loading...</div>
+                    <div class="text-sm text-muted" id="user-count">Loading...</div>
                 </div>
 
-                <div class="overflow-auto rounded-md border border-slate-700/40">
+                <div class="overflow-auto rounded-md border" style="border-color: var(--border-muted)">
                     <table class="min-w-full text-sm">
-                        <thead class="bg-slate-100 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200">
+                        <thead style="background: var(--surface); color: var(--text)">
                             <tr>
                                 <th class="px-3 py-2 text-left">ID</th>
                                 <th class="px-3 py-2 text-left">Name</th>
@@ -61,7 +61,7 @@
                                 <th class="px-3 py-2 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="users-tbody" class="divide-y divide-slate-700/40">
+                        <tbody id="users-tbody" class="divide-y" style="--tw-divide-opacity: 1; border-color: var(--border-muted)">
                             <tr>
                                 <td colspan="7" class="px-3 py-10 text-center text-slate-500">Loading users…</td>
                             </tr>
