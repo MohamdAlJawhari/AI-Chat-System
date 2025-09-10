@@ -15,9 +15,13 @@ class LlmClient
      */
     public function chat(array $messages, ?string $model = null, array $options = []): string
     {
-        $base  = rtrim((string) config('llm.base_url'), '/');
+        $base = rtrim((string) config('llm.base_url'), '/');
         // Be forgiving about whitespace in env/config
         $model = trim($model ?? (string) config('llm.model'));
+
+        // Merge config defaults once, centrally
+        $defaults = array_filter(config('llm.defaults', []), fn($v) => $v !== null && $v !== '');
+        $opts = array_merge($defaults, $options);
 
         // Allow caller to pass a custom HTTP timeout via options
         $httpTimeout = 120;
@@ -27,9 +31,9 @@ class LlmClient
         }
 
         $payload = array_merge([
-            'model'    => $model,
+            'model' => $model,
             'messages' => $messages,
-            'stream'   => false,
+            'stream' => true,
         ], $options);
 
         $res = Http::timeout($httpTimeout)->post("$base/api/chat", $payload);
@@ -43,11 +47,13 @@ class LlmClient
     {
         $base = rtrim((string) config('llm.base_url'), '/');
         $res = Http::timeout(10)->get("$base/api/tags");
-        if (!$res->successful()) return [];
+        if (!$res->successful())
+            return [];
         $out = [];
         foreach ((array) data_get($res->json(), 'models', []) as $m) {
             $name = (string) data_get($m, 'name');
-            if ($name !== '') $out[] = $name;
+            if ($name !== '')
+                $out[] = $name;
         }
         return $out;
     }

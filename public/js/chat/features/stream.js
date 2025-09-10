@@ -55,7 +55,7 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
     const scheduleRender = () => {
       if (renderQueued) return; renderQueued = true;
       requestAnimationFrame(() => {
-        const maxPerFrame = 240;
+        const maxPerFrame = 80;
         const chunk = smoothQueue.slice(0, maxPerFrame);
         smoothQueue = smoothQueue.slice(maxPerFrame);
         if (chunk) assistant._raw += chunk;
