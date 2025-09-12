@@ -1,4 +1,5 @@
 import { el } from '../core/dom.js';
+import { state } from '../core/state.js';
 import { applyDirection } from '../core/rtl.js';
 import { renderSafeMarkdown, styleRichContent } from './markdown.js';
 
@@ -102,7 +103,14 @@ export function messageBubble(role, content, metadata = null, opts = {}) {
     dlBtn.innerHTML = '<i class="fa-solid fa-download text-[12px]"></i>';
     dlBtn.addEventListener('click', (e)=>{
       e.stopPropagation();
-      const fname = buildFilename(opts.chatTitle);
+      // Use the freshest chat title if available from state; fall back to initial
+      let latestTitle = opts.chatTitle;
+      try {
+        const activeId = wrap._chatId || state.currentChatId;
+        const cur = (state.chatsCache || []).find(c => c.id === activeId);
+        if (cur && cur.title) latestTitle = cur.title;
+      } catch (_) { /* ignore and use fallback */ }
+      const fname = buildFilename(latestTitle);
       downloadText(fname, wrap._raw ?? '');
     });
 
@@ -118,6 +126,7 @@ export function messageBubble(role, content, metadata = null, opts = {}) {
 
   wrap.appendChild(bubble);
   wrap._contentEl = contentEl; wrap._raw = content ?? '';
+  try { wrap._chatId = state.currentChatId; } catch(_) {}
   // expose bubble for stream logic (to style pending vs rendered)
   wrap._bubble = bubble;
   return wrap;

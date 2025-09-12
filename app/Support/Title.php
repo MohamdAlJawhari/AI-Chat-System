@@ -35,7 +35,7 @@ class Title
             /** @var LlmClient $llm */
             $llm = app(LlmClient::class);
             $prompt = <<<PROMPT
-You are a headline creator. At the beginning of any conversation, create a short, descriptive headline (3 to 7 words) based on the language being used. No quotes or punctuation at the ends. Output only the title.
+You are a headline creator. At the beginning of any conversation, create a short, descriptive headline (2 to 5 words) based on the language being used. No quotes or punctuation at the ends. Output only the title.
 
 Chat Start:
 {$conversationStart}
@@ -45,7 +45,7 @@ PROMPT;
             $title = trim($llm->chat([
                 ['role' => 'system', 'content' => 'You generate concise, descriptive chat titles.'],
                 ['role' => 'user', 'content' => $prompt],
-            ], $model, ['temperature' => 0.2, 'http_timeout' => 10]));
+            ], $model, ['temperature' => 0.7, 'http_timeout' => 10]));
 
             // Sanitize: strip wrapping quotes and trailing punctuation, clamp length
             $title = trim($title, " \t\n\r\0\x0B\"'·-–—•:.");

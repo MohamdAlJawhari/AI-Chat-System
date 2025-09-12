@@ -14,10 +14,17 @@ use Illuminate\Validation\Rule;
  */
 class MessageController extends Controller
 {
+    private function assertOwns(Chat $chat): void
+    {
+        if ($chat->user_id !== (int) (Auth::id() ?? 0))
+            abort(403);
+    }
 
     /** Return messages for a chat (oldest first). */
     public function index(Chat $chat)
     {
+        $this->assertOwns($chat);
+
         $messages = $chat->messages()
             ->orderBy('created_at')
             ->get(['id', 'role', 'content', 'metadata', 'created_at']);
@@ -53,6 +60,8 @@ class MessageController extends Controller
         // 2) Build short history + system prompt
         $chat = Chat::findOrFail($request->chat_id);
 
+        $this->assertOwns($chat);
+
         // Title will be generated after the assistant reply based on the conversation start
 
         $history = $chat->messages()->orderBy('created_at')->take(20)->get();
@@ -62,7 +71,8 @@ class MessageController extends Controller
             $messages[] = ['role' => 'system', 'content' => $sp];
         }
         foreach ($history as $m) {
-            if ($m->content === null) continue;
+            if ($m->content === null)
+                continue;
             $messages[] = ['role' => $m->role, 'content' => $m->content];
         }
 
@@ -85,7 +95,8 @@ class MessageController extends Controller
             try {
                 $chat->title = \App\Support\Title::generateFromChatStart($chat, $modelFromSettings);
                 $chat->save();
-            } catch (\Throwable $e) { /* ignore */ }
+            } catch (\Throwable $e) { /* ignore */
+            }
         }
 
         return response()->json([
@@ -119,6 +130,8 @@ class MessageController extends Controller
         ]);
 
         $chat = Chat::findOrFail($request->chat_id);
+
+        $this->assertOwns($chat);
         // Defer title generation until after assistant message is persisted (end of stream)
 
         $history = $chat->messages()->orderBy('created_at')->take(20)->get();
@@ -127,7 +140,8 @@ class MessageController extends Controller
             $messages[] = ['role' => 'system', 'content' => $sp];
         }
         foreach ($history as $m) {
-            if ($m->content === null) continue;
+            if ($m->content === null)
+                continue;
             $messages[] = ['role' => $m->role, 'content' => $m->content];
         }
 
@@ -172,15 +186,20 @@ class MessageController extends Controller
 
             while (!$body->eof()) {
                 $chunk = $body->read(8192);
-                if ($chunk === '' || $chunk === false) { usleep(10000); continue; }
+                if ($chunk === '' || $chunk === false) {
+                    usleep(10000);
+                    continue;
+                }
                 $buffer .= $chunk;
 
                 while (($pos = strpos($buffer, "\n")) !== false) {
                     $line = trim(substr($buffer, 0, $pos));
                     $buffer = substr($buffer, $pos + 1);
-                    if ($line === '') continue;
+                    if ($line === '')
+                        continue;
                     $evt = json_decode($line, true);
-                    if (!is_array($evt)) continue;
+                    if (!is_array($evt))
+                        continue;
 
                     $delta = data_get($evt, 'message.content', '');
                     if ($delta !== '') {
@@ -242,7 +261,8 @@ class MessageController extends Controller
                 try {
                     $chat->title = \App\Support\Title::generateFromChatStart($chat, $modelUsed);
                     $chat->save();
-                } catch (\Throwable $e) { /* ignore */ }
+                } catch (\Throwable $e) { /* ignore */
+                }
             }
         }, 200, [
             'Content-Type' => 'text/event-stream',

@@ -6,13 +6,7 @@ use Illuminate\Support\Facades\Http;
 
 class LlmClient
 {
-    /**
-     * Call Ollama chat endpoint and return assistant text.
-     *
-     * @param array $messages  e.g. [['role'=>'system','content'=>'...'], ['role'=>'user','content'=>'...']]
-     * @param string|null $model Optional override for model name
-     * @param array $options  Extra params for Ollama (temperature, etc.)
-     */
+    // Call Ollama chat endpoint and return assistant text.
     public function chat(array $messages, ?string $model = null, array $options = []): string
     {
         $base = rtrim((string) config('llm.base_url'), '/');
@@ -33,7 +27,7 @@ class LlmClient
         $payload = array_merge([
             'model' => $model,
             'messages' => $messages,
-            'stream' => true,
+            'stream' => false,
         ], $options);
 
         $res = Http::timeout($httpTimeout)->post("$base/api/chat", $payload);
@@ -42,7 +36,9 @@ class LlmClient
         return data_get($json, 'message.content', '');
     }
 
-    /** Query Ollama for available model tags. */
+    /** To see what models are available in the LLM server.
+     * No need for this function right now. But I will keep it for future use.
+    */
     public function listModels(): array
     {
         $base = rtrim((string) config('llm.base_url'), '/');
