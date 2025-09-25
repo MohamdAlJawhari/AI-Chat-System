@@ -1,3 +1,9 @@
+@props([
+    'title' => null,
+    'head' => null,
+    'scripts' => null,
+])
+
 <!DOCTYPE html>
 <html lang="en">
 <head>

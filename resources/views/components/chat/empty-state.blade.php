@@ -1,30 +1,27 @@
 @props(['showAuthCta' => false])
 
 <div class="mx-auto max-w-3xl mt-8 space-y-4 uchat-empty-state">
-    <!-- Top logo -->
     <div class="flex items-center justify-center">
         <img src="/logo.svg" alt="UChat" class="h-12 md:h-16 object-contain" />
     </div>
 
-    <!-- Main card -->
     <div class="rounded-2xl backdrop-blur px-6 py-8 shadow-md glass-panel">
         <div class="text-center">
-            <div class="mx-auto w-10 h-10 rounded-full flex items-center justify-center" style="background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent)" class="mb-3">
+            <div class="mx-auto w-10 h-10 rounded-full flex items-center justify-center mb-3" style="background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent)">
                 <i class="fa-solid fa-robot"></i>
             </div>
             <h2 class="text-2xl font-semibold">How can I help you today?</h2>
             <p class="text-sm" style="color: color-mix(in srgb, var(--text) 70%, transparent)">Start by asking a question or searching the archive.</p>
             @if($showAuthCta)
-            <div class="mt-4 flex items-center justify-center gap-2">
-                <a href="/login" class="rounded-md px-4 py-2 text-sm text-white" style="background: var(--accent)">Sign in</a>
-                <a href="/register" class="rounded-md px-4 py-2 text-sm" style="border: 1px solid var(--border-muted); background: var(--surface); color: var(--text)">Create account</a>
-            </div>
+                <div class="mt-4 flex items-center justify-center gap-2">
+                    <a href="/login" class="rounded-md px-4 py-2 text-sm text-white" style="background: var(--accent)">Sign in</a>
+                    <a href="/register" class="rounded-md px-4 py-2 text-sm" style="border: 1px solid var(--border-muted); background: var(--surface); color: var(--text)">Create account</a>
+                </div>
             @endif
         </div>
     </div>
 
-    <!-- Two-line ticker (EN + AR) -->
-    <div class="relative w-full overflow-hidden rounded-lg border bg-white/70 dark:bg-neutral-900/70 divide-y" style="border-color: var(--border-muted); background: var(--surface); --tw-divide-opacity: 1;">
+    <div class="relative w-full overflow-hidden rounded-lg border divide-y" style="border-color: var(--border-muted); background: var(--surface); --tw-divide-opacity: 1;">
         <div class="uchat-ticker-row" dir="ltr">
             <div class="px-3 py-2 text-xs md:text-sm text-slate-700 dark:text-neutral-200">
                 <div class="uchat-ticker-track uchat-anim-ltr">

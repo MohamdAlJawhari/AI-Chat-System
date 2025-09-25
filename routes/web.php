@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ChatController;
@@ -13,7 +13,7 @@ Route::get('/', function () {
 
 // Chat app page (Breeze sessions). Keep simple 'auth' without 'verified'.
 Route::get('/dashboard', function () {
-    return view('chat');
+    return view('pages.chat.index');
 })->middleware(['auth'])->name('dashboard');
 
 // Session-protected APIs under /api
@@ -61,5 +61,5 @@ Route::middleware('auth')->get('/admin', function () {
     if (!$u || $u->role !== 'admin') {
         abort(403, 'Admin only');
     }
-    return view('admin.control');
+    return view('pages.admin.users');
 })->name('admin.control');

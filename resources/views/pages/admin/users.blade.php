@@ -1,4 +1,4 @@
-<x-layouts.app :title="'Admin Control'">
+<x-layout.page :title="'Admin Control'">
     <div class="relative min-h-screen">
         <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.08),transparent_60%)]"></div>
 
@@ -10,7 +10,6 @@
                 </div>
             </div>
 
-            <!-- Create User Panel -->
             <div class="mb-6 rounded-lg p-4 shadow-sm glass-panel">
                 <h2 class="mb-3 text-lg font-medium">Create User</h2>
                 <form id="create-user-form" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -76,4 +75,4 @@
         @php($__ver = @filemtime(public_path('js/admin/users.js')) ?: time())
         <script type="module" src="/js/admin/users.js?v={{ $__ver }}"></script>
     </x-slot>
-</x-layouts.app>
+</x-layout.page>
