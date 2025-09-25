@@ -3,36 +3,36 @@ import { state } from '../core/state.js';
 import { applyDirection } from '../core/rtl.js';
 import { renderSafeMarkdown, styleRichContent } from './markdown.js';
 
-function downloadText(filename, text){
+function downloadText(filename, text) {
   try {
     const blob = new Blob([text ?? ''], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=> URL.revokeObjectURL(url), 1000);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   } catch (e) { console.error('Download failed', e); }
 }
 
-function timestampName(){
+function timestampName() {
   const d = new Date();
-  const pad = (n)=> String(n).padStart(2,'0');
-  return `uchat-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.txt`;
+  const pad = (n) => String(n).padStart(2, '0');
+  return `uchat-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.txt`;
 }
 
-function sanitizeTitle(s){
+function sanitizeTitle(s) {
   const base = String(s || 'untitled').trim().slice(0, 80);
-  const noInvalid = base.replace(/[^A-Za-z0-9\-_\s]/g, '_');
+  const noInvalid = base.replace(/[^\p{L}0-9\-_ ]/gu, '_');
   return noInvalid.replace(/\s+/g, '_') || 'untitled';
 }
 
-function buildFilename(chatTitle){
+function buildFilename(chatTitle) {
   const d = new Date();
-  const pad = (n)=> String(n).padStart(2,'0');
-  const ts = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  const pad = (n) => String(n).padStart(2, '0');
+  const ts = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
   return `uchat-${sanitizeTitle(chatTitle)}-${ts}.txt`;
 }
 
-async function copyTextToClipboard(text){
+async function copyTextToClipboard(text) {
   // Prefer modern API on secure contexts; fallback to execCommand otherwise
   try {
     if (navigator.clipboard && window.isSecureContext) {
@@ -81,27 +81,27 @@ export function messageBubble(role, content, metadata = null, opts = {}) {
   bubble.appendChild(contentEl);
 
   // Overlays for assistant messages: toolbar bottom-left (latency + actions)
-  if (role !== 'user'){
+  if (role !== 'user') {
     const toolbar = el('div', 'absolute -bottom-5 left-0 flex items-center gap-2');
     const btnCls = 'h-6 w-6 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-neutral-700 dark:hover:bg-neutral-600 dark:text-white flex items-center justify-center';
 
     const copyBtn = el('button', btnCls);
     copyBtn.title = 'Copy';
     copyBtn.innerHTML = '<i class="fa-regular fa-copy text-[12px]"></i>';
-    copyBtn.addEventListener('click', async (e)=>{
+    copyBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const ok = await copyTextToClipboard(wrap._raw ?? '');
       if (ok) {
         const prev = copyBtn.innerHTML;
         copyBtn.innerHTML = '<i class="fa-solid fa-check text-[12px]"></i>';
-        setTimeout(()=>{ copyBtn.innerHTML = prev; }, 800);
+        setTimeout(() => { copyBtn.innerHTML = prev; }, 800);
       }
     });
 
     const dlBtn = el('button', btnCls);
     dlBtn.title = 'Download';
     dlBtn.innerHTML = '<i class="fa-solid fa-download text-[12px]"></i>';
-    dlBtn.addEventListener('click', (e)=>{
+    dlBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       // Use the freshest chat title if available from state; fall back to initial
       let latestTitle = opts.chatTitle;
@@ -114,7 +114,7 @@ export function messageBubble(role, content, metadata = null, opts = {}) {
       downloadText(fname, wrap._raw ?? '');
     });
 
-    const latency = el('div','text-[10px] text-neutral-400/90 select-none hidden','');
+    const latency = el('div', 'text-[10px] text-neutral-400/90 select-none hidden', '');
     toolbar.appendChild(latency);
     toolbar.appendChild(copyBtn);
     toolbar.appendChild(dlBtn);
@@ -126,7 +126,7 @@ export function messageBubble(role, content, metadata = null, opts = {}) {
 
   wrap.appendChild(bubble);
   wrap._contentEl = contentEl; wrap._raw = content ?? '';
-  try { wrap._chatId = state.currentChatId; } catch(_) {}
+  try { wrap._chatId = state.currentChatId; } catch (_) { }
   // expose bubble for stream logic (to style pending vs rendered)
   wrap._bubble = bubble;
   return wrap;
@@ -134,13 +134,13 @@ export function messageBubble(role, content, metadata = null, opts = {}) {
 
 /** Create a chat list row with select/rename/delete actions. */
 export function chatItem(chat, { onSelect, onRename, onDelete, active }) {
-/**
- * UI widgets: messageBubble + chatItem.
- * - messageBubble supports user/assistant styles, streaming, and an external toolbar
- *   with time + copy + download for assistant messages.
- */
+  /**
+   * UI widgets: messageBubble + chatItem.
+   * - messageBubble supports user/assistant styles, streaming, and an external toolbar
+   *   with time + copy + download for assistant messages.
+   */
   const row = el('div', 'group flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-neutral-800');
-  if (active) row.classList.add('bg-slate-200','dark:bg-neutral-800');
+  if (active) row.classList.add('bg-slate-200', 'dark:bg-neutral-800');
   const btn = el('button', 'flex-1 text-left px-1 py-1'); btn.textContent = chat.title || 'Untitled'; btn.onclick = () => onSelect(chat.id);
   const rename = el('button', 'opacity-60 hover:opacity-100 text-xs px-1 py-0.5 hidden group-hover:block'); rename.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>'; rename.title = 'Rename chat'; rename.onclick = (e) => { e.stopPropagation(); onRename(chat); };
   const del = el('button', 'opacity-60 hover:opacity-100 text-xs px-1 py-0.5 hidden group-hover:block'); del.innerHTML = '<i class="fa-solid fa-trash"></i>'; del.title = 'Delete chat'; del.onclick = (e) => { e.stopPropagation(); onDelete(chat); };

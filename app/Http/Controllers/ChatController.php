@@ -8,19 +8,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 
-/**
- * Handles CRUD for chats owned by the authenticated session user.
- */
+/*
+    Handles CRUD for chats owned by the authenticated session user.
+*/
 class ChatController extends Controller
 {
-    /** Return the current authenticated user id or abort(401). */
+    // Return the current authenticated user id or abort(401)
     private function currentUserId(): int {
         $id = Auth::id();
         if (!$id) abort(401);
         return (int) $id;
     }
 
-    /** List chats for current user (most recent first). */
+    // List chats for current user (most recent first)
     public function index(Request $request)
     {
         $userId = $this->currentUserId();
@@ -33,7 +33,7 @@ class ChatController extends Controller
         return response()->json($chats);
     }
 
-    /** Create a new chat with optional title/settings. */
+    // Create a new chat with optional title/settings
     public function store(Request $request)
     {
         $request->validate([
@@ -51,7 +51,7 @@ class ChatController extends Controller
         return response()->json($chat, 201);
     }
 
-    /** Partial update of a chat (title and/or settings). */
+    // Partial update of a chat (title and/or settings)
     public function update(Request $request, Chat $chat)
     {
         // authorize ownership (dev-mode simple check)
@@ -76,7 +76,7 @@ class ChatController extends Controller
         return response()->json($chat);
     }
 
-    /** Delete a chat (and cascade messages). */
+    // Delete a chat (and cascade messages)
     public function destroy(Chat $chat)
     {
         if ($chat->user_id !== $this->currentUserId()) {
