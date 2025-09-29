@@ -6,12 +6,12 @@
     </div>
 
     <div class="rounded-2xl backdrop-blur px-6 py-8 shadow-md glass-panel">
-        <div class="text-center">
+        <div class="text-center space-y-6">
             <div class="mx-auto w-10 h-10 rounded-full flex items-center justify-center mb-3" style="background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent)">
                 <i class="fa-solid fa-robot"></i>
             </div>
             <h2 class="text-2xl font-semibold">How can I help you today?</h2>
-            <p class="text-sm" style="color: color-mix(in srgb, var(--text) 70%, transparent)">Start by asking a question or searching the archive.</p>
+            <p class="text-sm" style="color: color-mix(in srgb, var(--text) 70%, transparent)">Start by <b>asking</b> a question or <b>searching</b> in the archive.</p>
             @if($showAuthCta)
                 <div class="mt-4 flex items-center justify-center gap-2">
                     <a href="/login" class="rounded-md px-4 py-2 text-sm text-white" style="background: var(--accent)">Sign in</a>
@@ -21,7 +21,7 @@
         </div>
     </div>
 
-    <div class="relative w-full overflow-hidden rounded-lg border divide-y" style="border-color: var(--border-muted); background: var(--surface); --tw-divide-opacity: 1;">
+    {{-- <div class="relative w-full overflow-hidden rounded-lg border divide-y" style="border-color: var(--border-muted); background: var(--surface); --tw-divide-opacity: 1;">
         <div class="uchat-ticker-row" dir="ltr">
             <div class="px-3 py-2 text-xs md:text-sm text-slate-700 dark:text-neutral-200">
                 <div class="uchat-ticker-track uchat-anim-ltr">
@@ -42,5 +42,5 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> --}}
 </div>

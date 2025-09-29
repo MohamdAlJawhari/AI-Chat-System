@@ -7,24 +7,30 @@ use App\Http\Controllers\Admin\UserAdminController;
 use Illuminate\Support\Facades\Route;
 
 // Redirect home to dashboard (chat)
-Route::get('/', function () {
-    return redirect()->route('dashboard');
-});
+Route::get('/', fn () => redirect()->route('dashboard'));
 
 // Chat app page (Breeze sessions). Keep simple 'auth' without 'verified'.
-Route::get('/dashboard', function () {
-    return view('pages.chat.index');
-})->middleware(['auth'])->name('dashboard');
+Route::middleware('auth')->get('/dashboard', fn () => view('pages.chat.index'))
+    ->name('dashboard');
 
 // Session-protected APIs under /api
-Route::middleware('auth')->prefix('api')->group(function(){
-    Route::get('/chats', [ChatController::class, 'index']);
-    Route::post('/chats', [ChatController::class, 'store']);
-    Route::patch('/chats/{chat}', [ChatController::class, 'update']);
-    Route::delete('/chats/{chat}', [ChatController::class, 'destroy']);
-    Route::get('/chats/{chat}/messages', [MessageController::class, 'index']);
-    Route::post('/messages', [MessageController::class, 'store']);
-    Route::post('/messages/stream', [MessageController::class, 'storeStream']);
+Route::prefix('api')->middleware('auth')->group(function () {
+
+    // ---- Chats ----
+    Route::name('chats.')->group(function () {
+        Route::get('/chats',          [ChatController::class, 'index'])->name('index');
+        Route::post('/chats',         [ChatController::class, 'store'])->name('store');
+        Route::patch('/chats/{chat}', [ChatController::class, 'update'])->name('update');
+        Route::delete('/chats/{chat}',[ChatController::class, 'destroy'])->name('destroy');
+        Route::get('/chats/{chat}/messages', [MessageController::class, 'index'])
+            ->name('messages.index');
+    });
+
+    // ---- Messages ----
+    Route::name('messages.')->group(function () {
+        Route::post('/messages',        [MessageController::class, 'store'])->name('store');
+        Route::post('/messages/stream', [MessageController::class, 'storeStream'])->name('stream');
+    });
 
     // Admin user management
     Route::get('/admin/users', [UserAdminController::class, 'index']);
@@ -36,7 +42,7 @@ Route::middleware('auth')->prefix('api')->group(function(){
     Route::delete('/admin/users/{user}', [UserAdminController::class, 'destroy']);
 });
 
-// Public models list
+// Public: list available LLM models
 Route::get('/api/models', function () {
     $m1 = trim((string) config('llm.model'));
     $m2 = trim((string) config('llm.model2'));
@@ -44,22 +50,20 @@ Route::get('/api/models', function () {
     if ($m1 !== '') $out[] = $m1;
     if ($m2 !== '' && $m2 !== $m1) $out[] = $m2;
     return response()->json($out);
-});
+})->name('models.index');
 
-// Breeze default profile routes remain
+// Breeze profile routes (session auth)
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/profile',  [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile',[ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile',[ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
 require __DIR__.'/auth.php';
 
-// Admin Control page (UI)
+// Admin Control UI page
 Route::middleware('auth')->get('/admin', function () {
     $u = auth()->user();
-    if (!$u || $u->role !== 'admin') {
-        abort(403, 'Admin only');
-    }
+    abort_if(!$u || $u->role !== 'admin', 403, 'Admin only');
     return view('pages.admin.users');
 })->name('admin.control');
