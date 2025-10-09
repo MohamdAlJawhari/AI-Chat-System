@@ -6,6 +6,11 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\Admin\UserAdminController;
 use Illuminate\Support\Facades\Route;
 
+// routes/web.php
+use App\Http\Controllers\HybridSearchController;
+Route::get('/search', [HybridSearchController::class, 'index'])->name('search');
+
+
 // Redirect home to dashboard (chat)
 Route::get('/', fn () => redirect()->route('dashboard'));
 
