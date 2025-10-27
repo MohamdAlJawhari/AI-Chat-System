@@ -1,12 +1,21 @@
 @props([
     'q' => null,
     'results' => null,
+    'limit' => 10,
 ])
 
 @php
     $hasQuery = filled($q ?? null);
     $resultsList = $results ?? [];
     $resultCount = $hasQuery && is_countable($resultsList) ? count($resultsList) : 0;
+    $limitValue = (int) ($limit ?? 10);
+    $limitOptions = [
+        10 => 'Top 10',
+        25 => 'Top 25',
+        50 => 'Top 50',
+        100 => 'Top 100',
+        0 => 'All results',
+    ];
 @endphp
 
 <div class="relative min-h-screen overflow-hidden py-12">
@@ -20,16 +29,28 @@
                 <p class="text-sm leading-6 text-muted sm:text-base">Surface reports, transcripts, and briefs from the UNews knowledge base. You can search in English or Arabic—the engine blends semantic and keyword matches.</p>
             </div>
 
-            <form method="get" action="{{ route('search') }}" role="search" class="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
-                <input
-                    type="text"
-                    name="q"
-                    value="{{ $q ?? '' }}"
-                    placeholder="Try “latest Lebanon updates” or “ملخص الانتخابات العراقية”…"
-                    class="w-full rounded-full border px-5 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent sm:flex-1 sm:text-base"
-                    style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
-                    aria-label="Search archive"
-                >
+            <form method="get" action="{{ route('search') }}" role="search" class="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex w-full flex-col gap-3 sm:flex-1 sm:flex-row">
+                    <input
+                        type="text"
+                        name="q"
+                        value="{{ $q ?? '' }}"
+                        placeholder="Try “latest Lebanon updates” or “ملخص الانتخابات العراقية”…"
+                        class="w-full rounded-full border px-5 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent sm:flex-1 sm:text-base"
+                        style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
+                        aria-label="Search archive"
+                    >
+                    <select
+                        name="limit"
+                        class="w-full rounded-full border px-4 py-3 text-sm sm:w-48 sm:text-base"
+                        style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
+                        aria-label="Result count"
+                    >
+                        @foreach($limitOptions as $value => $label)
+                            <option value="{{ $value }}" @if($limitValue === (int) $value) selected @endif>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <button
                     type="submit"
                     class="w-full rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white shadow-lg transition-transform duration-150 sm:w-auto sm:text-base"
