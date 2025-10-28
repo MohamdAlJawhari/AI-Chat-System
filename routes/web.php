@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Route;
 
 // routes/web.php
 use App\Http\Controllers\HybridSearchController;
-Route::get('/search', [HybridSearchController::class, 'index'])->name('search');
+Route::middleware('auth')->get('/search', [HybridSearchController::class, 'index'])->name('search');
 
 
 // Redirect home to dashboard (chat)

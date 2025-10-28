@@ -22,6 +22,15 @@
     <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(92,122,234,0.16),_transparent_65%)]"></div>
 
     <div class="relative mx-auto flex max-w-5xl flex-col gap-10 px-4 pb-24">
+        <a
+            href="{{ route('dashboard') }}"
+            class="inline-flex w-fit items-center gap-2 rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-wide text-muted transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            style="border-color: var(--border-muted);"
+        >
+            <span aria-hidden="true" class="text-sm">&larr;</span>
+            Back to Chat
+        </a>
+
         <section class="glass-panel rounded-3xl border px-6 py-10 shadow-2xl sm:px-12" style="border-color: var(--border-muted); background: color-mix(in srgb, var(--surface) 85%, transparent);">
             <div class="max-w-3xl space-y-3">
                 <span class="text-xs font-semibold uppercase tracking-[0.28em] text-muted">Archive</span>
