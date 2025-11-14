@@ -2,6 +2,7 @@
     'q' => null,
     'results' => null,
     'limit' => 10,
+    'pagination' => null,
 ])
 
 @php
@@ -9,6 +10,20 @@
     $resultsList = $results ?? [];
     $resultCount = $hasQuery && is_countable($resultsList) ? count($resultsList) : 0;
     $limitValue = (int) ($limit ?? 10);
+    $paginationData = is_array($pagination ?? null) ? $pagination : null;
+    $paginatedMode = $hasQuery && $limitValue === 0 && !empty($paginationData);
+    $currentPage = $paginatedMode ? max((int) ($paginationData['page'] ?? 1), 1) : 1;
+    $batchSize = $paginatedMode ? max(1, (int) ($paginationData['batch'] ?? 1)) : null;
+    $hasMoreResults = $paginatedMode ? (bool) ($paginationData['has_more'] ?? false) : false;
+    $hasPreviousResults = $paginatedMode && $currentPage > 1;
+    $rangeStart = $paginatedMode ? ($batchSize * ($currentPage - 1)) : 0;
+    $rangeEnd = $paginatedMode ? $rangeStart + $resultCount : $resultCount;
+    $paginationLinks = $paginatedMode
+        ? [
+            'prev' => request()->fullUrlWithQuery(['page' => max(1, $currentPage - 1), 'batch' => $batchSize]),
+            'next' => request()->fullUrlWithQuery(['page' => $currentPage + 1, 'batch' => $batchSize]),
+        ]
+        : null;
     $limitOptions = [
         10 => 'Top 10',
         25 => 'Top 25',
@@ -74,7 +89,22 @@
             <section class="space-y-5">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
                     <h2 class="text-xl font-semibold sm:text-2xl" style="color: var(--text)">Results for “{{ $q }}”</h2>
-                    <span class="text-sm text-muted">{{ $resultCount }} {{ \Illuminate\Support\Str::plural('match', $resultCount) }}</span>
+                    @if($paginatedMode)
+                        <span class="text-sm text-muted">
+                            Showing
+                            @if($resultCount > 0)
+                                {{ $rangeStart + 1 }}&ndash;{{ $rangeEnd }}
+                            @else
+                                0
+                            @endif
+                            results
+                            @if($hasMoreResults)
+                                (more available)
+                            @endif
+                        </span>
+                    @else
+                        <span class="text-sm text-muted">{{ $resultCount }} {{ \Illuminate\Support\Str::plural('match', $resultCount) }}</span>
+                    @endif
                 </div>
 
                 @forelse($resultsList as $r)
@@ -117,9 +147,55 @@
                     </article>
                 @empty
                     <div class="glass-panel rounded-2xl border px-8 py-12 text-center text-sm leading-7 text-muted sm:text-base" style="border-color: var(--border-muted);">
-                        No results matched your query. Try a different phrasing, include key names, or switch languages.
+                        @if($paginatedMode && $rangeStart > 0)
+                            You have reached the end of the available matches. Try going back a batch or refine the keywords for new hits.
+                        @else
+                            No results matched your query. Try a different phrasing, include key names, or switch languages.
+                        @endif
                     </div>
                 @endforelse
+                @if($paginatedMode && ($hasPreviousResults || $hasMoreResults))
+                    <div class="flex flex-col gap-4 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="text-xs uppercase tracking-[0.22em] text-muted">
+                            Batch of {{ $batchSize }} results
+                        </div>
+                        <div class="flex flex-col gap-3 sm:flex-row">
+                            @if($hasPreviousResults)
+                                <a
+                                    href="{{ $paginationLinks['prev'] }}"
+                                    class="w-full rounded-full border px-5 py-3 text-center text-sm font-semibold uppercase tracking-wide transition sm:w-auto"
+                                    style="border-color: var(--border-muted); color: var(--text);"
+                                >
+                                    Previous {{ $batchSize }}
+                                </a>
+                            @else
+                                <span
+                                    class="w-full rounded-full border px-5 py-3 text-center text-sm font-semibold uppercase tracking-wide opacity-50 sm:w-auto"
+                                    style="border-color: var(--border-muted); color: var(--text); cursor: not-allowed;"
+                                >
+                                    Previous {{ $batchSize }}
+                                </span>
+                            @endif
+
+                            @if($hasMoreResults)
+                                <a
+                                    href="{{ $paginationLinks['next'] }}"
+                                    class="w-full rounded-full px-5 py-3 text-center text-sm font-semibold uppercase tracking-wide text-white shadow-lg transition sm:w-auto"
+                                    style="background: linear-gradient(135deg, #5c7aea 0%, #3657c9 100%);"
+                                >
+                                    Next {{ $batchSize }}
+                                </a>
+                            @else
+                                <span
+                                    class="w-full rounded-full border px-5 py-3 text-center text-sm font-semibold uppercase tracking-wide opacity-50 sm:w-auto"
+                                    style="border-color: var(--border-muted); color: var(--text); cursor: not-allowed;"
+                                >
+                                    Next {{ $batchSize }}
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                @endif
             </section>
         @elseif(!is_null($q))
             <div class="glass-panel mx-auto max-w-xl rounded-2xl border px-8 py-10 text-center text-sm leading-7 text-muted sm:text-base" style="border-color: var(--border-muted);">
