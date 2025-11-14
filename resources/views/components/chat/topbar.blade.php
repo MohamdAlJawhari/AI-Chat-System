@@ -10,18 +10,17 @@
             content: '';
             position: absolute;
             inset: -120%;
-            /* 💥 Stronger blue + a bit of white center glow */
             background: radial-gradient(circle,
-                    rgba(0, 102, 255, 0.55) 0%,
+                    rgba(0, 102, 255, 0.7) 0%,
                     /* vivid blue center */
-                    rgba(92, 122, 234, 0.1) 50%,
+                    rgba(92, 122, 234, 0.5) 40%,
                     /* soft fade */
                     rgba(92, 122, 234, 0) 80%
                     /* transparent edge */
                 );
             opacity: 0;
             transform: scale(0.3);
-            animation: chat-search-wave 2s ease-out infinite;
+            animation: chat-search-wave 3s ease-out infinite;
             z-index: 0;
         }
 
