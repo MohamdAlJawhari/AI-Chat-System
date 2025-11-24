@@ -22,4 +22,6 @@ export const elements = {
   get sidebarToggle() { return document.getElementById('sidebarToggle'); },
   get sidebarIcon() { return document.getElementById('sidebarIcon'); },
   get themeToggle() { return document.getElementById('themeToggle'); },
+  get archiveToggle() { return document.getElementById('archiveToggle'); },
+  get archiveModeBadge() { return document.getElementById('archiveModeBadge'); },
 };

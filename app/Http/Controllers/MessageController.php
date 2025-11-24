@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Chat;
 use App\Models\Message;
+use App\Services\ArchiveRagService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -19,6 +20,31 @@ class MessageController extends Controller
     {
         if ($chat->user_id !== (int) (Auth::id() ?? 0))
             abort(403);
+    }
+
+    /**
+     * Optionally run archive retrieval augmented generation.
+     *
+     * @param  array<int, array<string, string>>  $messages
+     * @return array{context:?string,sources:array<int,array<string,mixed>>}
+     */
+    private function attachArchiveContext(bool $enabled, ?string $query, array &$messages): array
+    {
+        if (!$enabled) {
+            return ['context' => null, 'sources' => []];
+        }
+
+        $query = trim((string) $query);
+        if ($query === '') {
+            return ['context' => null, 'sources' => []];
+        }
+
+        $rag = app(ArchiveRagService::class)->buildContext($query);
+        if (!empty($rag['context'])) {
+            $messages[] = ['role' => 'system', 'content' => $rag['context']];
+        }
+
+        return $rag;
     }
 
     // Return messages for a chat (oldest first)
@@ -41,7 +67,19 @@ class MessageController extends Controller
             'role' => ['required', 'string', Rule::in(['user', 'assistant', 'system', 'tool'])],
             'content' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],
+            'archive_search' => ['nullable', 'boolean'],
         ]);
+
+        $useArchive = $request->boolean('archive_search');
+        $incomingContent = $request->input('content');
+
+        $userMetadata = $request->input('metadata', []);
+        if (!is_array($userMetadata)) {
+            $userMetadata = [];
+        }
+        if ($useArchive) {
+            $userMetadata['archive_search'] = true;
+        }
 
         // 1) Save incoming message
         $msg = Message::create([
@@ -50,7 +88,7 @@ class MessageController extends Controller
             'user_id' => $request->role === 'user' ? (int) (Auth::id() ?? 0) : null,
             'role' => $request->role,
             'content' => $request->input('content'),
-            'metadata' => $request->metadata,
+            'metadata' => !empty($userMetadata) ? $userMetadata : null,
         ]);
 
         // If it's assistant/system/tool, don't call the model
@@ -71,6 +109,10 @@ class MessageController extends Controller
         if ($sp = config('llm.system_prompt')) {
             $messages[] = ['role' => 'system', 'content' => $sp];
         }
+
+        $rag = $this->attachArchiveContext($useArchive, $incomingContent, $messages);
+        $ragSources = $rag['sources'] ?? [];
+
         foreach ($history as $m) {
             if ($m->content === null)
                 continue;
@@ -88,7 +130,11 @@ class MessageController extends Controller
             'user_id' => null,
             'role' => 'assistant',
             'content' => $assistantText,
-            'metadata' => ['model' => trim($modelFromSettings ?? (string) config('llm.model'))],
+            'metadata' => array_filter([
+                'model' => trim($modelFromSettings ?? (string) config('llm.model')),
+                'archive_search' => $useArchive ?: null,
+                'sources' => !empty($ragSources) ? $ragSources : null,
+            ], fn($v) => $v !== null && $v !== []),
         ]);
 
         // Generate title now that we have both sides of the start of the conversation
@@ -119,7 +165,11 @@ class MessageController extends Controller
             'chat_id' => ['required', 'uuid', Rule::exists('chats', 'id')],
             'role' => ['required', 'string', Rule::in(['user'])],
             'content' => ['required', 'string'],
+            'archive_search' => ['nullable', 'boolean'],
         ]);
+
+        $useArchive = $request->boolean('archive_search');
+        $incomingContent = $request->input('content');
 
         // Save user message
         $userMsg = Message::create([
@@ -128,7 +178,7 @@ class MessageController extends Controller
             'user_id' => (int) (Auth::id() ?? 0),
             'role' => 'user',
             'content' => $request->input('content'),
-            'metadata' => null,
+            'metadata' => $useArchive ? ['archive_search' => true] : null,
         ]);
 
         $chat = Chat::findOrFail($request->chat_id);
@@ -141,6 +191,10 @@ class MessageController extends Controller
         if ($sp = config('llm.system_prompt')) {
             $messages[] = ['role' => 'system', 'content' => $sp];
         }
+
+        $rag = $this->attachArchiveContext($useArchive, $incomingContent, $messages);
+        $ragSources = $rag['sources'] ?? [];
+
         foreach ($history as $m) {
             if ($m->content === null)
                 continue;
@@ -170,7 +224,7 @@ class MessageController extends Controller
 
         $assistantId = (string) \Illuminate\Support\Str::uuid();
 
-        return response()->stream(function () use ($httpRes, $chat, $assistantId, $model) {
+        return response()->stream(function () use ($httpRes, $chat, $assistantId, $model, $ragSources, $useArchive) {
             // Continue processing even if client disconnects
             @ignore_user_abort(true);
             $body = $httpRes->toPsrResponse()->getBody();
@@ -180,11 +234,29 @@ class MessageController extends Controller
             $assistantCreated = false;
             $lastPersistLen = 0;
 
+            $buildAssistantMetadata = function (string $modelName) use ($useArchive, $ragSources): array {
+                $meta = ['model' => $modelName];
+                if ($useArchive) {
+                    $meta['archive_search'] = true;
+                    if (!empty($ragSources)) {
+                        $meta['sources'] = $ragSources;
+                    }
+                }
+                return $meta;
+            };
+
             $send = function (array $data) {
                 echo 'data: ' . json_encode($data) . "\n\n";
                 @ob_flush();
                 @flush();
             };
+
+            if ($useArchive) {
+                $send([
+                    'archive_search' => true,
+                    'rag_sources' => $ragSources,
+                ]);
+            }
 
             while (!$body->eof()) {
                 $chunk = $body->read(8192);
@@ -216,7 +288,7 @@ class MessageController extends Controller
                                 'user_id' => null,
                                 'role' => 'assistant',
                                 'content' => $assistantText,
-                                'metadata' => ['model' => $modelUsed],
+                                'metadata' => $buildAssistantMetadata($modelUsed),
                             ]);
                             $assistantCreated = true;
                             $lastPersistLen = strlen($assistantText);
@@ -243,7 +315,7 @@ class MessageController extends Controller
                 // Final update with full content and model used
                 \App\Models\Message::where('id', $assistantId)->update([
                     'content' => $assistantText,
-                    'metadata' => ['model' => $modelUsed],
+                    'metadata' => $buildAssistantMetadata($modelUsed),
                 ]);
             } else {
                 // No token streamed (edge case); still create an empty assistant message
@@ -253,7 +325,7 @@ class MessageController extends Controller
                     'user_id' => null,
                     'role' => 'assistant',
                     'content' => $assistantText,
-                    'metadata' => ['model' => $modelUsed],
+                    'metadata' => $buildAssistantMetadata($modelUsed),
                 ]);
                 $assistantCreated = true;
             }

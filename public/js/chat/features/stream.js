@@ -8,10 +8,11 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
   const text = composer.value.trim();
   if (!text) return;
   await createChatIfNeeded();
+  const usingArchive = !!state.archiveEnabled;
 
   const cur = (state.chatsCache || []).find(c=>c.id===state.currentChatId);
   const chatTitle = cur?.title || 'Untitled';
-  messagesEl.appendChild(messageBubble('user', text, null, { chatTitle }));
+  messagesEl.appendChild(messageBubble('user', text, usingArchive ? { archive_search: true } : null, { chatTitle }));
   messagesEl.scrollTop = messagesEl.scrollHeight;
   composer.value = '';
   composer.style.height = 'auto';
@@ -43,7 +44,7 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
     }, 100);
 
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-    const r = await fetch('/api/messages/stream', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin', body: JSON.stringify({ chat_id: state.currentChatId, role: 'user', content: text }) });
+    const r = await fetch('/api/messages/stream', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin', body: JSON.stringify({ chat_id: state.currentChatId, role: 'user', content: text, archive_search: usingArchive }) });
     if (!r.ok || !r.body) throw new Error(await r.text());
 
     const reader = r.body.getReader();
@@ -81,6 +82,18 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
         const json = chunk.slice(5).trim();
         try {
           const evt = JSON.parse(json);
+          if (evt.rag_sources) {
+            assistant._ragSources = evt.rag_sources;
+            if (typeof assistant._setSources === 'function') {
+              assistant._setSources(evt.rag_sources);
+            }
+          }
+          if (Object.prototype.hasOwnProperty.call(evt, 'archive_search')) {
+            assistant._archiveEnabled = !!evt.archive_search;
+            if (typeof assistant._setArchiveBadge === 'function') {
+              assistant._setArchiveBadge(assistant._archiveEnabled);
+            }
+          }
           if (evt.delta) {
             if (assistant._thinkingEl) {
               assistant._thinkingEl.remove(); assistant._thinkingEl = null;

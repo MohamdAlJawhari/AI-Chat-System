@@ -68,25 +68,40 @@
         </a>
     </div>
 
-    <div class="flex items-center gap-2">
-        <label class="text-sm" style="color: color-mix(in srgb, var(--text) 70%, transparent)">Model</label>
-        <select id="modelSelect"
-            class="rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[var(--accent)]"
-            style="background: var(--surface); border: 1px solid var(--border-muted); color: var(--text);"></select>
-        <button id="themeToggle" class="rounded-md px-2 py-1 hover:brightness-110"
-            style="background: var(--surface); color: var(--text); border: 1px solid var(--border-muted);"
-            title="Toggle theme">
-            <i id="themeIcon" class="fa-solid fa-moon"></i>
-        </button>
-        <div class="relative">
-            <button id="userBtn" class="rounded-md px-2 py-1 hover:brightness-110"
+    <div class="flex items-center gap-4">
+        <div class="flex items-center gap-3 pr-4 border-r" style="border-color: var(--border-muted);">
+            <div class="flex flex-col leading-tight">
+                <span class="text-[11px] uppercase tracking-[0.35em] text-muted">Archive</span>
+                <span id="archiveModeBadge" class="text-xs font-semibold" style="color: var(--text);">Off</span>
+            </div>
+            <label class="relative inline-flex cursor-pointer items-center" title="When enabled, answers cite the newsroom archive">
+                <input type="checkbox" id="archiveToggle" class="sr-only peer">
+                <span class="h-6 w-11 rounded-full border transition peer-checked:bg-emerald-400/70 peer-checked:border-emerald-300/70"
+                    style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.25);"></span>
+                <span
+                    class="pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow transition peer-checked:translate-x-5 peer-checked:bg-white/90"></span>
+            </label>
+        </div>
+        <div class="flex items-center gap-2">
+            <label class="text-sm" style="color: color-mix(in srgb, var(--text) 70%, transparent)">Model</label>
+            <select id="modelSelect"
+                class="rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                style="background: var(--surface); border: 1px solid var(--border-muted); color: var(--text);"></select>
+            <button id="themeToggle" class="rounded-md px-2 py-1 hover:brightness-110"
                 style="background: var(--surface); color: var(--text); border: 1px solid var(--border-muted);"
-                title="Account">
-                <i class="fa-regular fa-user"></i>
+                title="Toggle theme">
+                <i id="themeIcon" class="fa-solid fa-moon"></i>
             </button>
-            <div id="userMenu"
-                class="hidden absolute right-0 mt-2 w-56 rounded-md border backdrop-blur shadow-lg py-1 text-sm z-50"
-                style="border-color: var(--border-muted); background: var(--bg);"></div>
+            <div class="relative">
+                <button id="userBtn" class="rounded-md px-2 py-1 hover:brightness-110"
+                    style="background: var(--surface); color: var(--text); border: 1px solid var(--border-muted);"
+                    title="Account">
+                    <i class="fa-regular fa-user"></i>
+                </button>
+                <div id="userMenu"
+                    class="hidden absolute right-0 mt-2 w-56 rounded-md border backdrop-blur shadow-lg py-1 text-sm z-50"
+                    style="border-color: var(--border-muted); background: var(--bg);"></div>
+            </div>
         </div>
     </div>
 </header>

@@ -46,6 +46,31 @@ function initUserMenu(){
   btn.addEventListener('click', (e)=>{ e.stopPropagation(); if (menu.classList.contains('hidden')) open(); else close(); });
 }
 
+function initArchiveSwitch(){
+  const toggle = elements.archiveToggle;
+  const badge = elements.archiveModeBadge;
+  const storageKey = 'uchat:archive-mode';
+  if (!toggle) return;
+
+  const stored = localStorage.getItem(storageKey);
+  state.archiveEnabled = stored === 'on';
+  toggle.checked = state.archiveEnabled;
+
+  const syncBadge = () => {
+    if (!badge) return;
+    badge.textContent = state.archiveEnabled ? 'Archive On' : 'Archive Off';
+    badge.style.color = state.archiveEnabled ? '#34d399' : '';
+  };
+
+  syncBadge();
+
+  toggle.addEventListener('change', () => {
+    state.archiveEnabled = toggle.checked;
+    localStorage.setItem(storageKey, state.archiveEnabled ? 'on' : 'off');
+    syncBadge();
+  });
+}
+
 /**
  * Fetch and render messages for the active chat.
  * Renders an empty-state if the chat has no messages.
@@ -86,7 +111,7 @@ async function createChatIfNeeded(){ if (state.currentChatId) return state.curre
 
 /** Main boot function that wires up everything. */
 async function bootstrap(){
-  initTheme(); initSidebar(state); initComposer(); initUserMenu();
+  initTheme(); initSidebar(state); initComposer(); initUserMenu(); initArchiveSwitch();
   // Auth status (session-based)
   /** Update the small status label in the sidebar. */
   function updateAuthStatus(){

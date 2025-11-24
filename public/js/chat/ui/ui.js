@@ -78,6 +78,23 @@ export function messageBubble(role, content, metadata = null, opts = {}) {
   if (role === 'user') contentEl.textContent = content ?? '';
   else { contentEl.innerHTML = renderSafeMarkdown(content ?? ''); styleRichContent(contentEl); }
   applyDirection(contentEl, content ?? '');
+
+  const initialArchive = !!(metadata && metadata.archive_search) || (role === 'user' && !!(opts && opts.archive));
+  let archiveBadge = null;
+  if (role === 'assistant') {
+    archiveBadge = el('span', 'mb-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em]');
+    archiveBadge.innerHTML = '<i class="fa-solid fa-database text-[9px]"></i><span>Archive Answer</span>';
+    archiveBadge.style.borderColor = 'rgba(52,211,153,0.45)';
+    archiveBadge.style.color = 'rgba(110,231,183,0.9)';
+    archiveBadge.classList.add('hidden');
+    bubble.appendChild(archiveBadge);
+  } else if (initialArchive) {
+    archiveBadge = el('span', 'mb-1 block text-[10px] uppercase tracking-[0.3em]');
+    archiveBadge.textContent = 'Archive Query';
+    archiveBadge.style.color = 'rgba(255,255,255,0.75)';
+    bubble.appendChild(archiveBadge);
+  }
+
   bubble.appendChild(contentEl);
 
   // Overlays for assistant messages: toolbar bottom-left (latency + actions)
@@ -129,6 +146,70 @@ export function messageBubble(role, content, metadata = null, opts = {}) {
   try { wrap._chatId = state.currentChatId; } catch (_) { }
   // expose bubble for stream logic (to style pending vs rendered)
   wrap._bubble = bubble;
+
+  if (archiveBadge) {
+    const toggleBadge = (flag) => {
+      archiveBadge.classList.toggle('hidden', !flag);
+    };
+    toggleBadge(initialArchive);
+    wrap._setArchiveBadge = toggleBadge;
+  }
+
+  let sourcesBox = null;
+  const ensureSourcesBox = () => {
+    if (!sourcesBox) {
+      sourcesBox = el('div', 'mt-4 space-y-2 rounded-2xl border px-4 py-3 text-xs');
+      sourcesBox.style.borderColor = 'rgba(255,255,255,0.08)';
+      sourcesBox.style.background = 'color-mix(in srgb, var(--surface) 75%, transparent)';
+      bubble.appendChild(sourcesBox);
+    }
+    return sourcesBox;
+  };
+  const setSources = (sources) => {
+    if (!Array.isArray(sources) || !sources.length) {
+      if (sourcesBox) {
+        sourcesBox.classList.add('hidden');
+        sourcesBox.innerHTML = '';
+      }
+      return;
+    }
+    const box = ensureSourcesBox();
+    box.classList.remove('hidden');
+    box.innerHTML = '';
+    const title = el('div', 'text-[11px] uppercase tracking-[0.3em]');
+    title.textContent = 'Archive Sources';
+    title.style.color = 'rgba(255,255,255,0.6)';
+    box.appendChild(title);
+    const list = el('ol', 'list-decimal space-y-2 pl-4');
+    sources.forEach((src) => {
+      const item = el('li', 'text-[11px] leading-relaxed');
+      const heading = el('div', 'font-semibold');
+      heading.textContent = `[${src.index ?? '?'}] ${src.title ?? 'Untitled dispatch'}`;
+      heading.style.color = 'var(--text)';
+      item.appendChild(heading);
+      const meta = el('div', 'text-[10px]');
+      const parts = [];
+      if (src.news_item_id) parts.push(`ID ${src.news_item_id}`);
+      if (typeof src.score === 'number') parts.push(`score ${Number(src.score).toFixed(3)}`);
+      meta.textContent = parts.join(' · ');
+      meta.style.color = 'rgba(255,255,255,0.6)';
+      item.appendChild(meta);
+      const snippet = src.snippet || src.introduction || src.body_excerpt;
+      if (snippet) {
+        const sn = el('p', 'mt-1 text-[11px]');
+        sn.textContent = snippet;
+        sn.style.color = 'rgba(255,255,255,0.85)';
+        item.appendChild(sn);
+      }
+      list.appendChild(item);
+    });
+    box.appendChild(list);
+  };
+  wrap._setSources = setSources;
+  if (metadata && Array.isArray(metadata.sources)) {
+    setSources(metadata.sources);
+  }
+
   return wrap;
 }
 
