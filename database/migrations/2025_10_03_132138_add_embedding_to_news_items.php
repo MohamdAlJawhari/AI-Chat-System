@@ -7,7 +7,7 @@ return new class extends Migration {
     public function up(): void
     {
         // 153 is just an example — set to your embedding size
-        DB::statement("ALTER TABLE news_items ADD COLUMN embedding vector(153);");
+        DB::statement("ALTER TABLE news_items ADD COLUMN embedding vector(1024);"); //For bge-m3, it should be 1024
 
         // Choose ONE metric you’ll use consistently:
         // L2 (Euclidean): vector_l2_ops

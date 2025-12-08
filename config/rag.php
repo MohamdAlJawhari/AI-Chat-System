@@ -18,5 +18,4 @@ return [
     'body_character_limit' => (int) env('RAG_BODY_CHAR_LIMIT', 900),
 
     // Instruction prepended to archive context
-    'instruction' => env('RAG_INSTRUCTION', 'Use these archive excerpts to answer. Cite Source [n] to ground claims. If the archive lacks the answer, say so.'),
-];
+    'instruction' => env('RAG_INSTRUCTION', 'Use these archive excerpts to answer. Cite Source [n] to ground claims. If the archive lacks the answer, ignore it and give me the most appropriate result.'),];
