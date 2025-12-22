@@ -22,8 +22,8 @@ class IngestQueueWorker extends Command
             $txt = trim($txt ?? '');
             if ($txt === '') return [];
 
-            $TARGET  = 2800;
-            $OVERLAP = 300;
+            $TARGET  = 1800; # 2800 tokens ~= 1800 words 
+            $OVERLAP = 200; # 300 tokens ~= 200 words
 
             // split on blank lines (paragraphs)
             $paras = array_values(array_filter(
@@ -72,6 +72,7 @@ class IngestQueueWorker extends Command
         do {
             // 1) Read pending news IDs from queue
             $ids = DB::table('news_ingest_queue')
+                ->where('tries', '<', 3)
                 ->orderBy('enqueued_at')
                 ->limit($PAGE)
                 ->pluck('news_id')

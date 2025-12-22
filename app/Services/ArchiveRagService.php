@@ -39,7 +39,7 @@ class ArchiveRagService
 
             $source = [
                 'index' => $idx + 1,
-                'news_item_id' => (string) $row->news_item_id,
+                'news_id' => (string) $row->news_id,
                 'title' => $title !== '' ? $title : 'Untitled dispatch',
                 'introduction' => $intro,
                 'snippet' => $snippet,
@@ -50,7 +50,7 @@ class ArchiveRagService
 
             $segment = '[' . $source['index'] . '] '
                 . $source['title']
-                . ' (ID: ' . $source['news_item_id'] . ')';
+                . ' (ID: ' . $source['news_id'] . ')';
             $lines = [$segment];
             if ($intro !== '') {
                 $lines[] = 'Intro: ' . $intro;

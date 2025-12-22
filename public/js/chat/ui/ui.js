@@ -189,7 +189,7 @@ export function messageBubble(role, content, metadata = null, opts = {}) {
       item.appendChild(heading);
       const meta = el('div', 'text-[10px]');
       const parts = [];
-      if (src.news_item_id) parts.push(`ID ${src.news_item_id}`);
+      if (src.news_id) parts.push(`ID ${src.news_id}`);
       if (typeof src.score === 'number') parts.push(`score ${Number(src.score).toFixed(3)}`);
       meta.textContent = parts.join(' · ');
       meta.style.color = 'rgba(255,255,255,0.6)';

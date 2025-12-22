@@ -112,7 +112,7 @@
                         <div class="flex flex-wrap items-center gap-3">
                             <h3 class="text-lg font-semibold sm:text-xl" style="color: var(--text)">{{ $r->title }}</h3>
                             <span class="rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide" style="border-color: rgba(92,122,234,0.35); background: rgba(92,122,234,0.12); color: rgba(227,234,255,0.85);">
-                                {{ $r->news_item_id }}
+                                {{ $r->news_id }}
                             </span>
                         </div>
 
