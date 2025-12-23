@@ -48,9 +48,39 @@ class HybridSearchController extends Controller
         $kDocs = $shouldPaginate ? ($requestedDocs + 1) : $limit;
 
         // ----- SEARCH PARAMETERS (NEW!) -----
-        $alpha = (float) $r->input('alpha', 0.80);     // semantic weight
+        $alpha = (float) $r->input('alpha', config('rag.alpha', 0.80)); // semantic weight
+        $beta = (float) $r->input('beta', config('rag.beta', 0.20));    // doc-level blend
+        $alpha = min(max($alpha, 0.0), 1.0);
+        $beta = min(max($beta, 0.0), 1.0);
+
         $perDoc = (int) $r->input('per_doc', 3);       // chunks per doc
         $efSearch = (int) $r->input('ef_search', 160); // HNSW parameter
+
+        // ----- OPTIONAL FILTERS -----
+        $category = trim((string) $r->input('category', ''));
+        $country = trim((string) $r->input('country', ''));
+        $city = trim((string) $r->input('city', ''));
+
+        $rawBreaking = $r->input('is_breaking_news', '');
+        $normalizedBreaking = is_string($rawBreaking) ? strtolower(trim($rawBreaking)) : $rawBreaking;
+        $isBreaking = null;
+        if ($normalizedBreaking !== '' && $normalizedBreaking !== null) {
+            $truthy = ['1', 1, true, 'true', 'yes', 'on'];
+            $falsy = ['0', 0, false, 'false', 'no', 'off'];
+
+            if (in_array($normalizedBreaking, $truthy, true)) {
+                $isBreaking = true;
+            } elseif (in_array($normalizedBreaking, $falsy, true)) {
+                $isBreaking = false;
+            }
+        }
+
+        $filters = [
+            'category' => $category !== '' ? $category : null,
+            'country' => $country !== '' ? $country : null,
+            'city' => $city !== '' ? $city : null,
+            'is_breaking_news' => $isBreaking,
+        ];
 
         $results = [];
         $hasMore = false;
@@ -59,8 +89,10 @@ class HybridSearchController extends Controller
             $results = $search->searchDocuments($q, [
                 'limit'     => $kDocs,
                 'alpha'     => $alpha,
+                'beta'      => $beta,
                 'per_doc'   => $perDoc,
                 'ef_search' => $efSearch,
+                'filters'   => $filters,
             ]);
 
             // ----- PAGINATION LOGIC (UNCHANGED) -----
@@ -90,8 +122,10 @@ class HybridSearchController extends Controller
             'limit'      => $limit,
             'pagination' => $pagination,
             'alpha'      => $alpha,
+            'beta'       => $beta,
             'per_doc'    => $perDoc,
             'ef_search'  => $efSearch,
+            'filters'    => $filters,
         ]);
     }
 }

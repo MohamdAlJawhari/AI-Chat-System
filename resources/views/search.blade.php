@@ -7,5 +7,13 @@
         </style>
     </x-slot>
 
-    <x-search.page :q="$q" :results="$results" :limit="$limit" :pagination="$pagination" />
+    <x-search.page
+        :q="$q"
+        :results="$results"
+        :limit="$limit"
+        :pagination="$pagination"
+        :alpha="$alpha"
+        :beta="$beta"
+        :filters="$filters"
+    />
 </x-layout.page>

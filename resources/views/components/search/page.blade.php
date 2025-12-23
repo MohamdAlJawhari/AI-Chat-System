@@ -3,6 +3,9 @@
     'results' => null,
     'limit' => 10,
     'pagination' => null,
+    'alpha' => 0.80,
+    'beta' => 0.20,
+    'filters' => [],
 ])
 
 @php
@@ -24,6 +27,14 @@
             'next' => request()->fullUrlWithQuery(['page' => $currentPage + 1, 'batch' => $batchSize]),
         ]
         : null;
+    $alphaValue = max(0.0, min(1.0, (float) ($alpha ?? 0.80)));
+    $betaValue = max(0.0, min(1.0, (float) ($beta ?? 0.20)));
+    $filterValues = is_array($filters ?? null) ? $filters : [];
+    $filterCategory = $filterValues['category'] ?? '';
+    $filterCountry = $filterValues['country'] ?? '';
+    $filterCity = $filterValues['city'] ?? '';
+    $filterBreakingRaw = $filterValues['is_breaking_news'] ?? null;
+    $filterBreakingValue = is_bool($filterBreakingRaw) ? ($filterBreakingRaw ? '1' : '0') : '';
     $limitOptions = [
         10 => 'Top 10',
         25 => 'Top 25',
@@ -53,35 +64,154 @@
                 <p class="text-sm leading-6 text-muted sm:text-base">Surface reports, transcripts, and briefs from the UNews knowledge base. You can search in English or Arabic—the engine blends semantic and keyword matches.</p>
             </div>
 
-            <form method="get" action="{{ route('search') }}" role="search" class="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div class="flex w-full flex-col gap-3 sm:flex-1 sm:flex-row">
-                    <input
-                        type="text"
-                        name="q"
-                        value="{{ $q ?? '' }}"
-                        placeholder="Try “latest Lebanon updates” or “ملخص الانتخابات العراقية”…"
-                        class="w-full rounded-full border px-5 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent sm:flex-1 sm:text-base"
-                        style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
-                        aria-label="Search archive"
+            <form method="get" action="{{ route('search') }}" role="search" class="mt-8 space-y-6">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex w-full flex-col gap-3 sm:flex-1 sm:flex-row">
+                        <input
+                            type="text"
+                            name="q"
+                            value="{{ $q ?? '' }}"
+                            placeholder="Try “latest Lebanon updates” or “ملخص الانتخابات الرئاسية”"
+                            class="w-full rounded-full border px-5 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent sm:flex-1 sm:text-base"
+                            style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
+                            aria-label="Search archive"
+                        >
+                        <select
+                            name="limit"
+                            class="w-full rounded-full border px-4 py-3 text-sm sm:w-48 sm:text-base"
+                            style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
+                            aria-label="Result count"
+                        >
+                            @foreach($limitOptions as $value => $label)
+                                <option value="{{ $value }}" @if($limitValue === (int) $value) selected @endif>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <button
+                        type="submit"
+                        class="w-full rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white shadow-lg transition-transform duration-150 sm:w-auto sm:text-base"
+                        style="background: linear-gradient(135deg, #5c7aea 0%, #3657c9 100%);"
                     >
-                    <select
-                        name="limit"
-                        class="w-full rounded-full border px-4 py-3 text-sm sm:w-48 sm:text-base"
-                        style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
-                        aria-label="Result count"
-                    >
-                        @foreach($limitOptions as $value => $label)
-                            <option value="{{ $value }}" @if($limitValue === (int) $value) selected @endif>{{ $label }}</option>
-                        @endforeach
-                    </select>
+                        Search
+                    </button>
                 </div>
-                <button
-                    type="submit"
-                    class="w-full rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white shadow-lg transition-transform duration-150 sm:w-auto sm:text-base"
-                    style="background: linear-gradient(135deg, #5c7aea 0%, #3657c9 100%);"
-                >
-                    Search
-                </button>
+
+                <div class="rounded-2xl border border-dashed px-5 py-5 sm:px-6" style="border-color: rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.02);">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-muted">Control Panel</p>
+                            <p class="text-sm text-muted sm:text-base">Optionally narrow the dataset before hybrid search or adjust scoring weights.</p>
+                        </div>
+                        <span class="w-fit rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted" style="border-color: var(--border-muted); background: rgba(255, 255, 255, 0.02);">
+                            Optional
+                        </span>
+                    </div>
+
+                    <div class="mt-4 grid gap-4 lg:grid-cols-2">
+                        <div class="rounded-xl border px-5 py-4" style="border-color: var(--border-muted); background: rgba(8, 14, 24, 0.65);">
+                            <div class="flex items-center justify-between gap-3">
+                                <h3 class="text-base font-semibold" style="color: var(--text)">Filter dataset</h3>
+                                <span class="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]" style="border-color: rgba(92,122,234,0.25); background: rgba(92,122,234,0.14); color: rgba(227,234,255,0.85);">
+                                    Pre-search
+                                </span>
+                            </div>
+                            <p class="mt-2 text-xs leading-5 text-muted">Use any combination of filters to cut down the corpus before the hybrid search runs.</p>
+                            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                                <label class="flex flex-col gap-2 text-sm">
+                                    <span class="text-xs uppercase tracking-[0.16em] text-muted">Category</span>
+                                    <input
+                                        type="text"
+                                        name="category"
+                                        value="{{ $filterCategory }}"
+                                        placeholder="e.g. سياسة"
+                                        class="w-full rounded-lg border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent"
+                                        style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
+                                    >
+                                </label>
+                                <label class="flex flex-col gap-2 text-sm">
+                                    <span class="text-xs uppercase tracking-[0.16em] text-muted">Country</span>
+                                    <input
+                                        type="text"
+                                        name="country"
+                                        value="{{ $filterCountry }}"
+                                        placeholder="e.g. لبنان"
+                                        class="w-full rounded-lg border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent"
+                                        style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
+                                    >
+                                </label>
+                                <label class="flex flex-col gap-2 text-sm">
+                                    <span class="text-xs uppercase tracking-[0.16em] text-muted">City</span>
+                                    <input
+                                        type="text"
+                                        name="city"
+                                        value="{{ $filterCity }}"
+                                        placeholder="e.g. بيروت"
+                                        class="w-full rounded-lg border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent"
+                                        style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
+                                    >
+                                </label>
+                                <label class="flex flex-col gap-2 text-sm sm:col-span-2">
+                                    <span class="text-xs uppercase tracking-[0.16em] text-muted">Breaking news</span>
+                                    <select
+                                        name="is_breaking_news"
+                                        class="w-full rounded-lg border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent"
+                                        style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
+                                    >
+                                        <option value="" @if($filterBreakingValue === '') selected @endif>Include all</option>
+                                        <option value="1" @if($filterBreakingValue === '1') selected @endif>Breaking only</option>
+                                        <option value="0" @if($filterBreakingValue === '0') selected @endif>Exclude breaking</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl border px-5 py-4" style="border-color: var(--border-muted); background: rgba(8, 14, 24, 0.65);">
+                            <div class="flex items-center justify-between gap-3">
+                                <h3 class="text-base font-semibold" style="color: var(--text)">Advanced weighting</h3>
+                                <span class="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]" style="border-color: rgba(92,122,234,0.25); background: rgba(92,122,234,0.14); color: rgba(227,234,255,0.85);">
+                                    Alpha / Beta
+                                </span>
+                            </div>
+                            <p class="mt-2 text-xs leading-5 text-muted">Balance semantic vectors vs. keywords and how much the average chunk score matters.</p>
+                            <div class="mt-4 space-y-4">
+                                <label class="block">
+                                    <div class="flex items-center justify-between text-xs uppercase tracking-[0.16em] text-muted">
+                                        <span>Alpha (semantic weight)</span>
+                                        <span class="text-[11px] text-muted">0 = lexical · 1 = semantic</span>
+                                    </div>
+                                    <input
+                                        type="number"
+                                        name="alpha"
+                                        value="{{ number_format($alphaValue, 2, '.', '') }}"
+                                        min="0"
+                                        max="1"
+                                        step="0.05"
+                                        class="mt-2 w-full rounded-lg border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent"
+                                        style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
+                                    >
+                                    <p class="mt-2 text-xs leading-5 text-muted">Raise to lean on semantic matches; lower to favor keyword ranking.</p>
+                                </label>
+                                <label class="block">
+                                    <div class="flex items-center justify-between text-xs uppercase tracking-[0.16em] text-muted">
+                                        <span>Beta (doc blend)</span>
+                                        <span class="text-[11px] text-muted">0 = best chunk · 1 = average</span>
+                                    </div>
+                                    <input
+                                        type="number"
+                                        name="beta"
+                                        value="{{ number_format($betaValue, 2, '.', '') }}"
+                                        min="0"
+                                        max="1"
+                                        step="0.05"
+                                        class="mt-2 w-full rounded-lg border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent"
+                                        style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
+                                    >
+                                    <p class="mt-2 text-xs leading-5 text-muted">Higher beta rewards documents with consistent relevance across chunks.</p>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </form>
         </section>
 
