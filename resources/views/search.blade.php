@@ -7,6 +7,11 @@
         </style>
     </x-slot>
 
+    <x-slot name="scripts">
+        @php($__filter_opts_ver = @filemtime(public_path('js/filter-options.js')) ?: time())
+        <script src="/js/filter-options.js?v={{ $__filter_opts_ver }}"></script>
+    </x-slot>
+
     <x-search.page
         :q="$q"
         :results="$results"

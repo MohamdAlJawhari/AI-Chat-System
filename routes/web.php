@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\Admin\UserAdminController;
+use App\Http\Controllers\FilterOptionsController;
 use Illuminate\Support\Facades\Route;
 
 // routes/web.php
@@ -45,6 +46,9 @@ Route::prefix('api')->middleware('auth')->group(function () {
     Route::post('/admin/users/{user}/make-admin', [UserAdminController::class, 'makeAdmin']);
     Route::post('/admin/users/{user}/make-user', [UserAdminController::class, 'makeUser']);
     Route::delete('/admin/users/{user}', [UserAdminController::class, 'destroy']);
+
+    // Distinct filter options (cached)
+    Route::get('/filter-options', FilterOptionsController::class)->name('filters.options');
 });
 
 // Public: list available LLM models

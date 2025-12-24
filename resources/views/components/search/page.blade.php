@@ -126,6 +126,9 @@
                                         name="category"
                                         value="{{ $filterCategory }}"
                                         placeholder="e.g. سياسة"
+                                        data-filter-source="category"
+                                        list="filter-category-options"
+                                        autocomplete="off"
                                         class="w-full rounded-lg border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent"
                                         style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
                                     >
@@ -137,6 +140,9 @@
                                         name="country"
                                         value="{{ $filterCountry }}"
                                         placeholder="e.g. لبنان"
+                                        data-filter-source="country"
+                                        list="filter-country-options"
+                                        autocomplete="off"
                                         class="w-full rounded-lg border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent"
                                         style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
                                     >
@@ -148,6 +154,9 @@
                                         name="city"
                                         value="{{ $filterCity }}"
                                         placeholder="e.g. بيروت"
+                                        data-filter-source="city"
+                                        list="filter-city-options"
+                                        autocomplete="off"
                                         class="w-full rounded-lg border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent"
                                         style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
                                     >

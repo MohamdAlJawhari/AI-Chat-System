@@ -187,17 +187,17 @@
                     <div class="grid gap-3 sm:grid-cols-2">
                         <label class="flex flex-col gap-1 text-sm">
                             <span class="text-[11px] uppercase tracking-[0.18em] text-muted">Category</span>
-                            <input type="text" name="category" placeholder="e.g. Politics"
+                            <input type="text" name="category" placeholder="e.g. Politics" data-filter-source="category" list="filter-category-options" autocomplete="off"
                                 class="w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent" />
                         </label>
                         <label class="flex flex-col gap-1 text-sm">
                             <span class="text-[11px] uppercase tracking-[0.18em] text-muted">Country</span>
-                            <input type="text" name="country" placeholder="e.g. Lebanon"
+                            <input type="text" name="country" placeholder="e.g. Lebanon" data-filter-source="country" list="filter-country-options" autocomplete="off"
                                 class="w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent" />
                         </label>
                         <label class="flex flex-col gap-1 text-sm">
                             <span class="text-[11px] uppercase tracking-[0.18em] text-muted">City</span>
-                            <input type="text" name="city" placeholder="e.g. Beirut"
+                            <input type="text" name="city" placeholder="e.g. Beirut" data-filter-source="city" list="filter-city-options" autocomplete="off"
                                 class="w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent" />
                         </label>
                         <label class="flex flex-col gap-1 text-sm sm:col-span-2">
@@ -215,11 +215,14 @@
                                 <input
                                     type="date"
                                     name="date_from"
-                                    class="w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent" />
+                                    class="w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent" 
+                                    style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"/>
+
                                 <input
                                     type="date"
                                     name="date_to"
-                                    class="w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent" />
+                                    class="w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent"
+                                    style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);" />
                             </div>
                             <p class="text-[11px] text-muted">Use either field or both to limit results by when the dispatch was sent.</p>
                         </div>

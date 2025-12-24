@@ -14,7 +14,9 @@
     </template>
 
     <x-slot name="scripts">
+        @php($__filter_opts_ver = @filemtime(public_path('js/filter-options.js')) ?: time())
         @php($__main_ver = @filemtime(public_path('js/chat/main.js')) ?: time())
+        <script src="/js/filter-options.js?v={{ $__filter_opts_ver }}"></script>
         <script type="module" src="/js/chat/main.js?v={{ $__main_ver }}"></script>
     </x-slot>
 </x-layout.page>
