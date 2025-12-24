@@ -209,6 +209,20 @@
                                 <option value="0">Exclude breaking</option>
                             </select>
                         </label>
+                        <div class="flex flex-col gap-1 text-sm sm:col-span-2">
+                            <span class="text-[11px] uppercase tracking-[0.18em] text-muted">Date range</span>
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <input
+                                    type="date"
+                                    name="date_from"
+                                    class="w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent" />
+                                <input
+                                    type="date"
+                                    name="date_to"
+                                    class="w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent" />
+                            </div>
+                            <p class="text-[11px] text-muted">Use either field or both to limit results by when the dispatch was sent.</p>
+                        </div>
                     </div>
 
                     <div class="flex items-center justify-between cursor-pointer">
@@ -277,13 +291,14 @@
                 </div>
             </details>
 
-            <button type="submit"
-                class="chat-search-button rounded-full px-4 py-2 flex items-center gap-2 text-sm font-medium hover:brightness-110 transition pointer-events-auto"
-                style="background: var(--surface); color: var(--text); border: 1px solid var(--border-muted);"
-                title="Open search page with filters">
+            <a href="/search"
+            class="chat-search-button rounded-full px-4 py-2 flex items-center gap-2 text-sm font-medium hover:brightness-110 transition pointer-events-auto"
+            style="background: var(--surface); color: var(--text); border: 1px solid var(--border-muted);"
+            title="Open search page with filters">
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <span>Search in Archive</span>
-            </button>
+            </a>
+
         </form>
 
         <a href="{{ url('/search') }}"

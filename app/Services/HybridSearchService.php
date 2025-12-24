@@ -21,7 +21,7 @@ class HybridSearchService
      *                       // alpha    => semantic weight
      *                       // beta     => doc-level blend between best and average chunk scores
      *                       // ef_search => HNSW search quality
-     *                       // filters  => optional dataset filters (category, country, city, is_breaking_news)
+     *                       // filters  => optional dataset filters (category, country, city, date_from, date_to, is_breaking_news)
      * @return array<int, object>
      */
     public function searchDocuments(string $query, array $options = []): array
@@ -54,6 +54,8 @@ class HybridSearchService
         $category = $this->nullIfEmpty($filters['category'] ?? null);
         $country = $this->nullIfEmpty($filters['country'] ?? null);
         $city = $this->nullIfEmpty($filters['city'] ?? null);
+        $dateFrom = $this->nullIfEmpty($filters['date_from'] ?? null);
+        $dateTo = $this->nullIfEmpty($filters['date_to'] ?? null);
         $isBreaking = $filters['is_breaking_news'] ?? null;
         if (!is_null($isBreaking)) {
             $isBreaking = (bool) $isBreaking;
@@ -83,7 +85,7 @@ class HybridSearchService
                 introduction,
                 body,
                 best_snippet
-            FROM hybrid_search_docs(?, {$vecStr}, ?, ?, ?, ?, ?, ?, ?, ?)
+            FROM hybrid_search_docs(?, {$vecStr}, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ";
 
         return DB::select($sql, [
@@ -96,6 +98,8 @@ class HybridSearchService
             $country,  // country filter
             $city,     // city filter
             $isBreaking, // is_breaking_news filter
+            $dateFrom, // date_from filter
+            $dateTo,   // date_to filter
         ]);
     }
 

@@ -33,6 +33,8 @@
     $filterCategory = $filterValues['category'] ?? '';
     $filterCountry = $filterValues['country'] ?? '';
     $filterCity = $filterValues['city'] ?? '';
+    $filterDateFrom = $filterValues['date_from'] ?? '';
+    $filterDateTo = $filterValues['date_to'] ?? '';
     $filterBreakingRaw = $filterValues['is_breaking_news'] ?? null;
     $filterBreakingValue = is_bool($filterBreakingRaw) ? ($filterBreakingRaw ? '1' : '0') : '';
     $limitOptions = [
@@ -150,6 +152,26 @@
                                         style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
                                     >
                                 </label>
+                                <div class="flex flex-col gap-2 text-sm sm:col-span-2">
+                                    <span class="text-xs uppercase tracking-[0.16em] text-muted">Date range</span>
+                                    <div class="grid gap-3 sm:grid-cols-2">
+                                        <input
+                                            type="date"
+                                            name="date_from"
+                                            value="{{ $filterDateFrom }}"
+                                            class="w-full rounded-lg border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent"
+                                            style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
+                                        >
+                                        <input
+                                            type="date"
+                                            name="date_to"
+                                            value="{{ $filterDateTo }}"
+                                            class="w-full rounded-lg border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent"
+                                            style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);"
+                                        >
+                                    </div>
+                                    <p class="text-xs leading-5 text-muted">Use either field or both to limit results by when the dispatch was sent.</p>
+                                </div>
                                 <label class="flex flex-col gap-2 text-sm sm:col-span-2">
                                     <span class="text-xs uppercase tracking-[0.16em] text-muted">Breaking news</span>
                                     <select

@@ -174,12 +174,16 @@ export function messageBubble(role, content, metadata = null, opts = {}) {
       return;
     }
     const box = ensureSourcesBox();
+    const wasCollapsed = box._collapsed ?? true;
     box.classList.remove('hidden');
     box.innerHTML = '';
-    const title = el('div', 'text-[11px] uppercase tracking-[0.3em]');
-    title.textContent = 'Archive Sources';
-    title.style.color = 'rgba(255,255,255,0.6)';
-    box.appendChild(title);
+    const header = el('button', 'flex w-full items-center justify-between text-[11px] uppercase tracking-[0.3em] cursor-pointer select-none');
+    header.type = 'button';
+    header.style.color = 'rgba(255,255,255,0.6)';
+    const title = el('span', '', 'Archive Sources');
+    const chevron = el('span', 'text-[10px] transition-transform duration-150');
+    chevron.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
+    header.append(title, chevron);
     const list = el('ol', 'list-decimal space-y-2 pl-4');
     sources.forEach((src) => {
       const item = el('li', 'text-[11px] leading-relaxed');
@@ -203,7 +207,16 @@ export function messageBubble(role, content, metadata = null, opts = {}) {
       }
       list.appendChild(item);
     });
-    box.appendChild(list);
+    const content = el('div', 'space-y-2 pt-2');
+    content.appendChild(list);
+    box.append(header, content);
+    const applyCollapsed = (flag) => {
+      box._collapsed = flag;
+      content.classList.toggle('hidden', flag);
+      chevron.style.transform = flag ? 'rotate(-90deg)' : 'rotate(0deg)';
+    };
+    applyCollapsed(wasCollapsed);
+    header.addEventListener('click', () => applyCollapsed(!box._collapsed));
   };
   wrap._setSources = setSources;
   if (metadata && Array.isArray(metadata.sources)) {

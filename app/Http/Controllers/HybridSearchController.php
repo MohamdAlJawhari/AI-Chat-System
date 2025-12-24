@@ -4,6 +4,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\HybridSearchService;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 
 class HybridSearchController extends Controller
@@ -60,6 +61,8 @@ class HybridSearchController extends Controller
         $category = trim((string) $r->input('category', ''));
         $country = trim((string) $r->input('country', ''));
         $city = trim((string) $r->input('city', ''));
+        $dateFromRaw = trim((string) $r->input('date_from', ''));
+        $dateToRaw = trim((string) $r->input('date_to', ''));
 
         $rawBreaking = $r->input('is_breaking_news', '');
         $normalizedBreaking = is_string($rawBreaking) ? strtolower(trim($rawBreaking)) : $rawBreaking;
@@ -79,6 +82,49 @@ class HybridSearchController extends Controller
             'category' => $category !== '' ? $category : null,
             'country' => $country !== '' ? $country : null,
             'city' => $city !== '' ? $city : null,
+            'date_from' => $dateFromRaw !== '' ? $dateFromRaw : null,
+            'date_to' => $dateToRaw !== '' ? $dateToRaw : null,
+            'is_breaking_news' => $isBreaking,
+        ];
+
+        // Normalize dates to ISO strings for the SQL function and reorder if needed
+        $dateFrom = null;
+        $dateTo = null;
+
+        if ($dateFromRaw !== '') {
+            try {
+                $dateFrom = CarbonImmutable::parse($dateFromRaw)->startOfDay();
+                $dateFromRaw = $dateFrom->toDateString();
+            } catch (\Throwable $e) {
+                $dateFromRaw = '';
+                $dateFrom = null;
+            }
+        }
+
+        if ($dateToRaw !== '') {
+            try {
+                $dateTo = CarbonImmutable::parse($dateToRaw)->endOfDay();
+                $dateToRaw = $dateTo->toDateString();
+            } catch (\Throwable $e) {
+                $dateToRaw = '';
+                $dateTo = null;
+            }
+        }
+
+        if ($dateFrom && $dateTo && $dateFrom->gt($dateTo)) {
+            [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+            [$dateFromRaw, $dateToRaw] = [$dateFrom->toDateString(), $dateTo->toDateString()];
+        }
+
+        $filters['date_from'] = $dateFromRaw !== '' ? $dateFromRaw : null;
+        $filters['date_to'] = $dateToRaw !== '' ? $dateToRaw : null;
+
+        $searchFilters = [
+            'category' => $filters['category'],
+            'country' => $filters['country'],
+            'city' => $filters['city'],
+            'date_from' => $dateFrom?->toIso8601String(),
+            'date_to' => $dateTo?->toIso8601String(),
             'is_breaking_news' => $isBreaking,
         ];
 
@@ -92,7 +138,7 @@ class HybridSearchController extends Controller
                 'beta'      => $beta,
                 'per_doc'   => $perDoc,
                 'ef_search' => $efSearch,
-                'filters'   => $filters,
+                'filters'   => $searchFilters,
             ]);
 
             // ----- PAGINATION LOGIC (UNCHANGED) -----
