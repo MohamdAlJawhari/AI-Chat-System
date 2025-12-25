@@ -2,7 +2,7 @@
 
 return [
     // Default number of archive documents to fetch for RAG responses
-    'doc_limit' => (int) env('RAG_DOC_LIMIT', 16),
+    'doc_limit' => (int) env('RAG_DOC_LIMIT', 6),
 
     // How many chunks per document the hybrid function should consider internally
     'per_doc' => (int) env('RAG_PER_DOC', 3),
@@ -15,7 +15,15 @@ return [
     'hnsw_ef_search' => (int) env('RAG_HNSW_EF_SEARCH', 160),
 
     // Cap the amount of article body text sent to the LLM
-    'body_character_limit' => (int) env('RAG_BODY_CHAR_LIMIT', 900),
+    'body_character_limit' => (int) env('RAG_BODY_CHAR_LIMIT', 500),
 
     // Instruction prepended to archive context
-    'instruction' => env('RAG_INSTRUCTION', 'Use these archive excerpts to answer. Cite Source [n] to ground claims. If the archive lacks the answer, ignore it and give me the most appropriate result.'),];
+    'instruction' => env('RAG_INSTRUCTION', <<<TXT
+    You are a press assistant. Use the sources inside <<ARCHIVE>> as primary evidence.
+    Do NOT invent facts, numbers, dates, names, locations, or events not stated in the sources.
+    Cite evidence like [1] or [2] for every factual claim taken from the archive.
+    If the archive is insufficient, say: "المصادر في الأرشيف غير كافية للإجابة بدقة."
+    You may add brief general background ONLY if you label it clearly as "معلومة عامة" and keep it to 2 sentences max.
+    Write a crisp answer first, then optional bullet points if requested.
+    TXT),
+    ];

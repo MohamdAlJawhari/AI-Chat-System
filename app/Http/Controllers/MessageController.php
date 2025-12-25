@@ -41,7 +41,14 @@ class MessageController extends Controller
 
         $rag = app(ArchiveRagService::class)->buildContext($query);
         if (!empty($rag['context'])) {
-            $messages[] = ['role' => 'system', 'content' => $rag['context']];
+            $archiveMsg = ['role' => 'system', 'content' => $rag['context']];
+
+            // Put archive block right after the first system prompt if it exists
+            if (!empty($messages) && ($messages[0]['role'] ?? null) === 'system') {
+                array_splice($messages, 1, 0, [$archiveMsg]);
+            } else {
+                array_unshift($messages, $archiveMsg);
+            }
         }
 
         return $rag;
@@ -106,7 +113,7 @@ class MessageController extends Controller
         $history = $chat->messages()->orderBy('created_at')->take(20)->get();
         $messages = [];
 
-        if ($sp = config('llm.system_prompt')) {
+        if ($sp = config('llm.default_persona')) {
             $messages[] = ['role' => 'system', 'content' => $sp];
         }
 
@@ -188,7 +195,7 @@ class MessageController extends Controller
 
         $history = $chat->messages()->orderBy('created_at')->take(20)->get();
         $messages = [];
-        if ($sp = config('llm.system_prompt')) {
+        if ($sp = config('llm.default_persona')) {
             $messages[] = ['role' => 'system', 'content' => $sp];
         }
 
