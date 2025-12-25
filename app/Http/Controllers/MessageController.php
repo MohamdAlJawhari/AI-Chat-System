@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Chat;
 use App\Models\Message;
 use App\Services\ArchiveRagService;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -28,7 +29,7 @@ class MessageController extends Controller
      * @param  array<int, array<string, string>>  $messages
      * @return array{context:?string,sources:array<int,array<string,mixed>>}
      */
-    private function attachArchiveContext(bool $enabled, ?string $query, array &$messages): array
+    private function attachArchiveContext(bool $enabled, ?string $query, array &$messages, array $filters = []): array
     {
         if (!$enabled) {
             return ['context' => null, 'sources' => []];
@@ -39,7 +40,7 @@ class MessageController extends Controller
             return ['context' => null, 'sources' => []];
         }
 
-        $rag = app(ArchiveRagService::class)->buildContext($query);
+        $rag = app(ArchiveRagService::class)->buildContext($query, null, $filters);
         if (!empty($rag['context'])) {
             $archiveMsg = ['role' => 'system', 'content' => $rag['context']];
 
@@ -66,6 +67,90 @@ class MessageController extends Controller
         return response()->json($messages);
     }
 
+    /**
+     * Normalize archive filters from the request for use in hybrid search and metadata.
+     *
+     * @return array{search: array<string, mixed>, metadata: array<string, mixed>}
+     */
+    private function normalizeArchiveFilters(Request $request): array
+    {
+        $filtersInput = $request->input('filters', []);
+        if (!is_array($filtersInput)) {
+            $filtersInput = [];
+        }
+
+        $category = trim((string) ($filtersInput['category'] ?? ''));
+        $country = trim((string) ($filtersInput['country'] ?? ''));
+        $city = trim((string) ($filtersInput['city'] ?? ''));
+
+        $dateFromRaw = trim((string) ($filtersInput['date_from'] ?? ''));
+        $dateToRaw = trim((string) ($filtersInput['date_to'] ?? ''));
+        $dateFrom = null;
+        $dateTo = null;
+
+        if ($dateFromRaw !== '') {
+            try {
+                $dateFrom = CarbonImmutable::parse($dateFromRaw)->startOfDay();
+                $dateFromRaw = $dateFrom->toDateString();
+            } catch (\Throwable) {
+                $dateFromRaw = '';
+                $dateFrom = null;
+            }
+        }
+
+        if ($dateToRaw !== '') {
+            try {
+                $dateTo = CarbonImmutable::parse($dateToRaw)->endOfDay();
+                $dateToRaw = $dateTo->toDateString();
+            } catch (\Throwable) {
+                $dateToRaw = '';
+                $dateTo = null;
+            }
+        }
+
+        if ($dateFrom && $dateTo && $dateFrom->gt($dateTo)) {
+            [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+            [$dateFromRaw, $dateToRaw] = [$dateFrom->toDateString(), $dateTo->toDateString()];
+        }
+
+        $rawBreaking = $filtersInput['is_breaking_news'] ?? '';
+        $normalizedBreaking = is_string($rawBreaking) ? strtolower(trim($rawBreaking)) : $rawBreaking;
+        $isBreaking = null;
+        if ($normalizedBreaking !== '' && $normalizedBreaking !== null) {
+            $truthy = ['1', 1, true, 'true', 'yes', 'on'];
+            $falsy = ['0', 0, false, 'false', 'no', 'off'];
+
+            if (in_array($normalizedBreaking, $truthy, true)) {
+                $isBreaking = true;
+            } elseif (in_array($normalizedBreaking, $falsy, true)) {
+                $isBreaking = false;
+            }
+        }
+
+        $metadataFilters = [
+            'category' => $category !== '' ? $category : null,
+            'country' => $country !== '' ? $country : null,
+            'city' => $city !== '' ? $city : null,
+            'date_from' => $dateFromRaw !== '' ? $dateFromRaw : null,
+            'date_to' => $dateToRaw !== '' ? $dateToRaw : null,
+            'is_breaking_news' => $isBreaking,
+        ];
+
+        $searchFilters = [
+            'category' => $metadataFilters['category'],
+            'country' => $metadataFilters['country'],
+            'city' => $metadataFilters['city'],
+            'date_from' => $dateFrom?->toIso8601String(),
+            'date_to' => $dateTo?->toIso8601String(),
+            'is_breaking_news' => $isBreaking,
+        ];
+
+        return [
+            'search' => $searchFilters,
+            'metadata' => array_filter($metadataFilters, fn($v) => $v !== null),
+        ];
+    }
+
     // Create a message and, for user role, append an assistant reply via the LLM
     public function store(Request $request)
     {
@@ -75,10 +160,20 @@ class MessageController extends Controller
             'content' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],
             'archive_search' => ['nullable', 'boolean'],
+            'filters' => ['nullable', 'array'],
+            'filters.category' => ['nullable', 'string'],
+            'filters.country' => ['nullable', 'string'],
+            'filters.city' => ['nullable', 'string'],
+            'filters.date_from' => ['nullable', 'string'],
+            'filters.date_to' => ['nullable', 'string'],
+            'filters.is_breaking_news' => ['nullable'],
         ]);
 
         $useArchive = $request->boolean('archive_search');
         $incomingContent = $request->input('content');
+        $filters = $this->normalizeArchiveFilters($request);
+        $searchFilters = $filters['search'];
+        $filtersForMetadata = $filters['metadata'];
 
         $userMetadata = $request->input('metadata', []);
         if (!is_array($userMetadata)) {
@@ -86,6 +181,9 @@ class MessageController extends Controller
         }
         if ($useArchive) {
             $userMetadata['archive_search'] = true;
+            if (!empty($filtersForMetadata)) {
+                $userMetadata['archive_filters'] = $filtersForMetadata;
+            }
         }
 
         // 1) Save incoming message
@@ -117,7 +215,7 @@ class MessageController extends Controller
             $messages[] = ['role' => 'system', 'content' => $sp];
         }
 
-        $rag = $this->attachArchiveContext($useArchive, $incomingContent, $messages);
+        $rag = $this->attachArchiveContext($useArchive, $incomingContent, $messages, $searchFilters);
         $ragSources = $rag['sources'] ?? [];
 
         foreach ($history as $m) {
@@ -141,6 +239,7 @@ class MessageController extends Controller
                 'model' => trim($modelFromSettings ?? (string) config('llm.model')),
                 'archive_search' => $useArchive ?: null,
                 'sources' => !empty($ragSources) ? $ragSources : null,
+                'filters' => $useArchive ? $filtersForMetadata : null,
             ], fn($v) => $v !== null && $v !== []),
         ]);
 
@@ -173,10 +272,20 @@ class MessageController extends Controller
             'role' => ['required', 'string', Rule::in(['user'])],
             'content' => ['required', 'string'],
             'archive_search' => ['nullable', 'boolean'],
+            'filters' => ['nullable', 'array'],
+            'filters.category' => ['nullable', 'string'],
+            'filters.country' => ['nullable', 'string'],
+            'filters.city' => ['nullable', 'string'],
+            'filters.date_from' => ['nullable', 'string'],
+            'filters.date_to' => ['nullable', 'string'],
+            'filters.is_breaking_news' => ['nullable'],
         ]);
 
         $useArchive = $request->boolean('archive_search');
         $incomingContent = $request->input('content');
+        $filters = $this->normalizeArchiveFilters($request);
+        $searchFilters = $filters['search'];
+        $filtersForMetadata = $filters['metadata'];
 
         // Save user message
         $userMsg = Message::create([
@@ -185,7 +294,12 @@ class MessageController extends Controller
             'user_id' => (int) (Auth::id() ?? 0),
             'role' => 'user',
             'content' => $request->input('content'),
-            'metadata' => $useArchive ? ['archive_search' => true] : null,
+            'metadata' => $useArchive
+                ? array_filter([
+                    'archive_search' => true,
+                    'archive_filters' => $filtersForMetadata,
+                ], fn($v) => $v !== null && $v !== [])
+                : null,
         ]);
 
         $chat = Chat::findOrFail($request->chat_id);
@@ -199,7 +313,7 @@ class MessageController extends Controller
             $messages[] = ['role' => 'system', 'content' => $sp];
         }
 
-        $rag = $this->attachArchiveContext($useArchive, $incomingContent, $messages);
+        $rag = $this->attachArchiveContext($useArchive, $incomingContent, $messages, $searchFilters);
         $ragSources = $rag['sources'] ?? [];
 
         foreach ($history as $m) {
@@ -231,7 +345,7 @@ class MessageController extends Controller
 
         $assistantId = (string) \Illuminate\Support\Str::uuid();
 
-        return response()->stream(function () use ($httpRes, $chat, $assistantId, $model, $ragSources, $useArchive) {
+        return response()->stream(function () use ($httpRes, $chat, $assistantId, $model, $ragSources, $useArchive, $filtersForMetadata) {
             // Continue processing even if client disconnects
             @ignore_user_abort(true);
             $body = $httpRes->toPsrResponse()->getBody();
@@ -241,12 +355,15 @@ class MessageController extends Controller
             $assistantCreated = false;
             $lastPersistLen = 0;
 
-            $buildAssistantMetadata = function (string $modelName) use ($useArchive, $ragSources): array {
+            $buildAssistantMetadata = function (string $modelName) use ($useArchive, $ragSources, $filtersForMetadata): array {
                 $meta = ['model' => $modelName];
                 if ($useArchive) {
                     $meta['archive_search'] = true;
                     if (!empty($ragSources)) {
                         $meta['sources'] = $ragSources;
+                    }
+                    if (!empty($filtersForMetadata)) {
+                        $meta['filters'] = $filtersForMetadata;
                     }
                 }
                 return $meta;

@@ -3,16 +3,42 @@ import { renderSafeMarkdown, styleRichContent } from '../ui/markdown.js';
 import { applyDirection } from '../core/rtl.js';
 import { messageBubble } from '../ui/ui.js';
 
+function collectArchiveFilters(){
+  const panel = document.querySelector('.chat-control-panel');
+  if (!panel) return {};
+  const grab = (name) => {
+    const input = panel.querySelector(`[name="${name}"]`);
+    if (!input) return '';
+    const value = (input.value ?? '').toString();
+    return value.trim();
+  };
+  const raw = {
+    category: grab('category'),
+    country: grab('country'),
+    city: grab('city'),
+    date_from: grab('date_from'),
+    date_to: grab('date_to'),
+    is_breaking_news: grab('is_breaking_news'),
+  };
+  const cleaned = {};
+  Object.entries(raw).forEach(([k, v]) => {
+    if (v !== '') cleaned[k] = v;
+  });
+  return cleaned;
+}
+
 export async function sendMessage(state, { createChatIfNeeded, loadMessages, loadChats }){
   const { messagesEl, composer, sendBtn } = elements;
   const text = composer.value.trim();
   if (!text) return;
   await createChatIfNeeded();
   const usingArchive = !!state.archiveEnabled;
+  const archiveFilters = usingArchive ? collectArchiveFilters() : {};
 
   const cur = (state.chatsCache || []).find(c=>c.id===state.currentChatId);
   const chatTitle = cur?.title || 'Untitled';
-  messagesEl.appendChild(messageBubble('user', text, usingArchive ? { archive_search: true } : null, { chatTitle }));
+  const userMeta = usingArchive ? { archive_search: true, archive_filters: archiveFilters } : null;
+  messagesEl.appendChild(messageBubble('user', text, userMeta, { chatTitle }));
   messagesEl.scrollTop = messagesEl.scrollHeight;
   composer.value = '';
   composer.style.height = 'auto';
@@ -44,7 +70,11 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
     }, 100);
 
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-    const r = await fetch('/api/messages/stream', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin', body: JSON.stringify({ chat_id: state.currentChatId, role: 'user', content: text, archive_search: usingArchive }) });
+    const payload = { chat_id: state.currentChatId, role: 'user', content: text, archive_search: usingArchive };
+    if (usingArchive && Object.keys(archiveFilters).length) {
+      payload.filters = archiveFilters;
+    }
+    const r = await fetch('/api/messages/stream', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin', body: JSON.stringify(payload) });
     if (!r.ok || !r.body) throw new Error(await r.text());
 
     const reader = r.body.getReader();

@@ -14,11 +14,12 @@ class ArchiveRagService
      *
      * @return array{context:?string,sources:array<int,array<string,mixed>>}
      */
-    public function buildContext(string $query, ?int $limit = null): array
+    public function buildContext(string $query, ?int $limit = null, array $filters = []): array
     {
         $limit = $limit ?? (int) config('rag.doc_limit', 16);
         $results = $this->search->searchDocuments($query, [
             'limit' => $limit,
+            'filters' => $filters,
         ]);
 
         if (empty($results)) {
