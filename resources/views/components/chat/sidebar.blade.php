@@ -1,8 +1,8 @@
 <aside id="sidebar" style="width: var(--sidebar-w, 16rem); background: var(--surface); border-right: 1px solid var(--border-muted)" class="shrink-0 backdrop-blur p-4 flex flex-col transition-[width] duration-200 ease-in-out overflow-hidden">
-    <div class="text-xl font-semibold mb-3 flex items-center gap-2">
-        <img src="/logo_login.svg" alt="Logo" class="h-7 w-7 object-contain" />
+    <a href="" class="text-xl font-semibold mb-3 flex items-center gap-2">
+        <img src="/logo_login.svg" alt="UChat Logo" class="h-7 w-7 object-contain" />
         UChat
-    </div>
+    </a>
     <button id="newChatBtn" class="mb-3 rounded-xl bg-[var(--accent)] hover:brightness-110 text-white px-3 py-2 text-sm flex items-center justify-between shadow-sm">
         <span>New chat</span>
         <i class="fa-solid fa-plus"></i>
