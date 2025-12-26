@@ -173,6 +173,13 @@
     $defaultBeta = number_format((float) config('rag.beta', 0.20), 2, '.', '');
     $personaOptions = config('llm.personas.allowed', []);
     $defaultPersona = config('llm.default_persona', 'assistant');
+    $personaLabels = [
+        'auto' => 'Auto (AI picks)',
+        'assistant' => 'Assistant - مساعد',
+        'author' => 'Author - كاتب',
+        'reporter' => 'Reporter - مراسل',
+        'summarizer' => 'Summarizer - المختصر',
+    ];
 @endphp
 
 <header class="relative z-40 p-3 border-b backdrop-blur flex items-center justify-between gap-3"
@@ -207,31 +214,31 @@
 
                     <div class="grid gap-3 sm:grid-cols-2">
                         <label class="flex flex-col gap-1 text-sm">
-                            <span class="text-[11px] uppercase tracking-[0.18em] text-muted">Category</span>
-                            <input type="text" name="category" placeholder="e.g. Politics" data-filter-source="category" list="filter-category-options" autocomplete="off"
+                            <span class="text-[11px] uppercase tracking-[0.18em] text-muted">Category - الفئة</span>
+                            <input type="text" name="category" placeholder="e.g. Politics - مثال: سياسة" data-filter-source="category" list="filter-category-options" autocomplete="off"
                                 class="w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent" />
                         </label>
                         <label class="flex flex-col gap-1 text-sm">
-                            <span class="text-[11px] uppercase tracking-[0.18em] text-muted">Country</span>
-                            <input type="text" name="country" placeholder="e.g. Lebanon" data-filter-source="country" list="filter-country-options" autocomplete="off"
+                            <span class="text-[11px] uppercase tracking-[0.18em] text-muted">Country - الدولة</span>
+                            <input type="text" name="country" placeholder="e.g. Lebanon - مثال: لبنان" data-filter-source="country" list="filter-country-options" autocomplete="off"
                                 class="w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent" />
                         </label>
                         <label class="flex flex-col gap-1 text-sm">
-                            <span class="text-[11px] uppercase tracking-[0.18em] text-muted">City</span>
-                            <input type="text" name="city" placeholder="e.g. Beirut" data-filter-source="city" list="filter-city-options" autocomplete="off"
+                            <span class="text-[11px] uppercase tracking-[0.18em] text-muted">City - المدينة</span>
+                            <input type="text" name="city" placeholder="e.g. Beirut - مثال: بيروت" data-filter-source="city" list="filter-city-options" autocomplete="off"
                                 class="w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent" />
                         </label>
                         <label class="flex flex-col gap-1 text-sm sm:col-span-2">
-                            <span class="text-[11px] uppercase tracking-[0.18em] text-muted">Breaking news</span>
+                            <span class="text-[11px] uppercase tracking-[0.18em] text-muted">Breaking news - أخبار عاجلة</span>
                             <select name="is_breaking_news"
                                 class="w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent">
-                                <option value="">Include all</option>
-                                <option value="1">Breaking only</option>
-                                <option value="0">Exclude breaking</option>
+                                <option value="">Include all - تضمين الكل</option>
+                                <option value="1">Breaking only - العاجلة فقط</option>
+                                <option value="0">Exclude breaking - استبعاد العاجلة</option>
                             </select>
                         </label>
                         <div class="flex flex-col gap-1 text-sm sm:col-span-2">
-                            <span class="text-[11px] uppercase tracking-[0.18em] text-muted">Date range</span>
+                            <span class="text-[11px] uppercase tracking-[0.18em] text-muted">Date range - نطاق التاريخ</span>
                             <div class="grid gap-3 sm:grid-cols-2">
                                 <input
                                     type="date"
@@ -245,14 +252,14 @@
                                     class="w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-transparent"
                                     style="background: rgba(8, 14, 24, 0.78); border-color: var(--border-muted); color: var(--text);" />
                             </div>
-                            <p class="text-[11px] text-muted">Use either field or both to limit results by when the dispatch was sent.</p>
+                            <p class="text-[11px] text-muted">Use either field or both to limit results by when the dispatch was sent. - استخدم أحد الحقلين أو كليهما لتقييد النتائج حسب تاريخ إرسال الخبر.</p>
                         </div>
                     </div>
 
                     <div class="flex items-center justify-between cursor-pointer">
                         <div>
-                            <p class="text-sm font-semibold" style="color: var(--text)">Advanced weighting</p>
-                            <p class="text-xs text-muted">Semantic vec vs. keywords & doc blending.</p>
+                            <p class="text-sm font-semibold" style="color: var(--text)">Advanced weighting - وزن متقدم</p>
+                            <p class="text-xs text-muted">Semantic vec vs. keywords & doc blending -<br> موازنة الدلالة مقابل الكلمات المفتاحية ودمج الوثائق</p>
                         </div>
                         <span class="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
                             style="border-color: rgba(123,141,255,0.3); color: rgba(215,223,255,0.92); background: rgba(123,141,255,0.12);">
@@ -279,7 +286,7 @@
                                         <span class="flex items-center gap-2">
                                             Alpha (semantic weight)
                                             <button type="button" class="info-chip" aria-label="What is alpha?">?</button>
-                                            <div class="info-tooltip">Alpha balances semantic (embeddings) vs. lexical (keywords). Higher alpha favors semantic similarity; lower alpha leans on keyword ranking.</div>
+                                            <div class="info-tooltip">Alpha balances semantic (embeddings) vs. lexical (keywords). Higher alpha favors semantic similarity; lower alpha leans on keyword ranking. <hr> ألفا توازن بين الدلالي (التضمينات) والمعجمي (الكلمات المفتاحية). زيادة ألفا تفضّل التشابه الدلالي، وخفضها يميل لترتيب الكلمات المفتاحية.</div>
                                         </span>
                                         <span>{{ $defaultAlpha }}</span>
                                     </div>
@@ -289,7 +296,7 @@
                                         <span>Lexical</span>
                                         <span>Semantic</span>
                                     </div>
-                                    <p class="text-xs text-muted">Raise to lean on semantic matches; lower to favor keyword ranking.</p>
+                                    <p class="text-xs text-muted">Raise to lean on semantic matches; lower to favor keyword ranking</p>
                                 </div>
 
                                 <div class="space-y-2 relative">
@@ -297,7 +304,7 @@
                                         <span class="flex items-center gap-2">
                                             Beta (doc blend)
                                             <button type="button" class="info-chip" aria-label="What is beta?">?</button>
-                                            <div class="info-tooltip">Beta controls how much the average chunk score matters versus the best chunk. Higher beta rewards documents with consistent relevance.</div>
+                                            <div class="info-tooltip">Beta controls how much the average chunk score matters versus the best chunk. Higher beta rewards documents with consistent relevance. <hr> بيتا تتحكم في وزن متوسط درجات المقاطع مقابل أفضل مقطع. زيادة بيتا تكافئ الوثائق ذات الصلة المتسقة.</div>
                                         </span>
                                         <span>{{ $defaultBeta }}</span>
                                     </div>
@@ -318,7 +325,7 @@
             <a href="/search"
             class="chat-search-button rounded-full px-4 py-2 flex items-center gap-2 text-sm font-medium hover:brightness-110 transition pointer-events-auto"
             style="background: var(--surface); color: var(--text); border: 1px solid var(--border-muted);"
-            title="Open search page with filters">
+            title="Open search page with filters - فتح صفحة البحث مع عوامل التصفية">
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <span>Search in Archive</span>
             </a>
@@ -340,7 +347,7 @@
                 <span class="text-[11px] uppercase tracking-[0.35em] text-muted">Archive</span>
                 <span id="archiveModeBadge" class="text-xs font-semibold" style="color: var(--text);">Off</span>
             </div>
-            <label class="relative inline-flex cursor-pointer items-center" title="When enabled, answers cite the newsroom archive">
+            <label class="relative inline-flex cursor-pointer items-center" title="When enabled, answers cite the newsroom archive - عند التفعيل، تستشهد الإجابات بأرشيف غرفة الأخبار">
                 <input type="checkbox" id="archiveToggle" class="sr-only peer">
                 <span class="h-6 w-11 rounded-full border transition peer-checked:bg-emerald-400/70 peer-checked:border-emerald-300/70"
                     style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.25);"></span>
@@ -350,17 +357,13 @@
         </div>
         <div class="flex items-center gap-3">
             <div class="flex items-center gap-2">
-                <label class="text-sm" style="color: color-mix(in srgb, var(--text) 70%, transparent)">Persona</label>
+                <label class="text-sm" style="color: color-mix(in srgb, var(--text) 70%, transparent)">Persona - الشخصية</label>
                 <select id="personaSelect" data-default-persona="{{ $defaultPersona }}"
                     class="rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[var(--accent)]"
                     style="background: var(--surface); border: 1px solid var(--border-muted); color: var(--text);">
                     @foreach($personaOptions as $persona)
                         <option value="{{ $persona }}" @if($persona === $defaultPersona) selected @endif>
-                            @if($persona === 'auto')
-                                Auto (AI picks)
-                            @else
-                                {{ ucfirst(str_replace('_', ' ', $persona)) }}
-                            @endif
+                            {{ $personaLabels[$persona] ?? ucfirst(str_replace('_', ' ', $persona)) }}
                         </option>
                     @endforeach
                 </select>
@@ -371,13 +374,13 @@
                 style="background: var(--surface); border: 1px solid var(--border-muted); color: var(--text);"></select>
             <button id="themeToggle" class="rounded-md px-2 py-1 hover:brightness-110"
                 style="background: var(--surface); color: var(--text); border: 1px solid var(--border-muted);"
-                title="Toggle theme">
+                title="Toggle theme - تبديل السمة">
                 <i id="themeIcon" class="fa-solid fa-moon"></i>
             </button>
             <div class="relative">
                 <button id="userBtn" class="rounded-md px-2 py-1 hover:brightness-110"
                     style="background: var(--surface); color: var(--text); border: 1px solid var(--border-muted);"
-                    title="Account">
+                    title="Account - الحساب">
                     <i class="fa-regular fa-user"></i>
                 </button>
                 <div id="userMenu"

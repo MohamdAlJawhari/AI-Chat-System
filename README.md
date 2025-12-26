@@ -6,14 +6,23 @@ UChat is a lightweight ChatGPT‑style web app built with Laravel. It talks to a
 
 - Streaming chat to a local LLM (Ollama)
 - Chats CRUD: create, rename, delete, list
-- Per‑chat settings: model (selectable from env‑configured list)
+- Per‑chat settings: model (selectable from env‑configured list) + persona
 - Markdown rendering with tables and Mermaid diagrams (sanitized)
 - Automatic RTL/LTR detection (Arabic/Hebrew supported)
-- Auto‑title from the first user message
+- Auto‑title from the chat start (first user + assistant)
 - Sidebar: resizable and collapsible; subtle gradient background
-- Auth (token‑based), Sign in/Sign up modal UI
+- Auth (token‑based), Sign in - تسجيل الدخول / Create account - إنشاء حساب UI
 - Admin role (block/unblock users), seeded admin
 - Modular front‑end (vanilla JS ES modules under `public/js/chat/`)
+
+## What Makes UChat Unique
+
+- Local‑first stack: Laravel + locally hosted Ollama models with streaming SSE and per‑chat model overrides.
+- Persona routing system: Auto - تلقائي uses an LLM classifier with keyword fallback; personas override generation settings (temperature/top_p) per chat.
+- Archive RAG pipeline: optional archive mode injects system context from hybrid search (Postgres HNSW vectors + lexical scoring) with alpha/beta weighting and filters (category, country, city, date range, breaking).
+- Source‑aware answers: archive context includes citation rules, and structured sources are attached to message metadata for UI display.
+- Smarter auto‑titles: titles are generated from the conversation start (first user + assistant) with a heuristic fallback.
+- Journalist‑friendly UI: RTL/LTR auto‑direction, sanitized Markdown + Mermaid, archive badges, sources panels, and copy/download actions.
 
 ## Requirements
 
@@ -50,8 +59,8 @@ UChat is a lightweight ChatGPT‑style web app built with Laravel. It talks to a
 
 Admin credentials
 
-- Email: `admin@example.com`
-- Password: `A@admin123`
+- Email - البريد الإلكتروني: `admin@example.com`
+- Password - كلمة المرور: `A@admin123`
 
 4) Ensure models are present in Ollama
 
@@ -65,11 +74,12 @@ Admin credentials
 
 ## Using the App
 
-- If not signed in, the home view shows an empty state with Sign in and Create account buttons.
-- Click the user icon in the top bar to open the account menu (Sign in, Sign up, Sign out, Switch account).
-- Bottom‑left shows sign‑in status and the current account.
-- Create chats from the sidebar (New chat) or start typing to create implicitly.
-- Choose a model from the top bar. Changing the model while a chat is selected updates just that chat.
+- If not signed in, the home view shows an empty state with Sign in - تسجيل الدخول and Create account - إنشاء حساب buttons.
+- Click the user icon in the top bar to open the account menu (Profile - الملف الشخصي, Admin Control - إدارة المشرف, Sign out - تسجيل الخروج).
+- Bottom‑left shows sign‑in status (Signed in - مسجّل الدخول / Not signed in - غير مسجّل الدخول) and the current account.
+- Create chats from the sidebar (New chat - محادثة جديدة) or start typing to create implicitly.
+- Choose a model (Model - النموذج) and persona (Persona - الشخصية) from the top bar. Changing them while a chat is selected updates just that chat.
+- Personas available: Auto - تلقائي, Assistant - مساعد, Author - كاتب, Reporter - مراسل, Summarizer - المختصر.
 - The assistant streams replies live. Markdown tables and Mermaid blocks render nicely; RTL text auto‑aligns.
 - Collapse/expand and resize the sidebar from the top‑left chevron and divider.
 
@@ -151,10 +161,10 @@ Headers
 
 ## Troubleshooting
 
-- “Not signed in” or 401 loop
+- “Not signed in - غير مسجّل الدخول” or 401 loop
   - Clear token in DevTools Console:
     - `localStorage.removeItem('apiToken'); location.reload();`
-  - Sign in via the top‑bar user menu or empty state buttons.
+  - Sign in - تسجيل الدخول via the top‑bar user menu or empty state buttons.
 - Windows: `php artisan db` error (TTY not supported)
   - Use `php artisan db:seed` (or `--class=`) instead of `php artisan db`.
 - Postgres: `uuid-ossp`
