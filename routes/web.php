@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ChatController;
-use App\Http\Controllers\MessageController;
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\FilterOptionsController;
+use App\Http\Controllers\Messages\MessageIndexController;
+use App\Http\Controllers\Messages\MessageSendController;
+use App\Http\Controllers\Messages\MessageStreamController;
 use Illuminate\Support\Facades\Route;
 
 // routes/web.php
@@ -28,14 +30,14 @@ Route::prefix('api')->middleware('auth')->group(function () {
         Route::post('/chats',         [ChatController::class, 'store'])->name('store');
         Route::patch('/chats/{chat}', [ChatController::class, 'update'])->name('update');
         Route::delete('/chats/{chat}',[ChatController::class, 'destroy'])->name('destroy');
-        Route::get('/chats/{chat}/messages', [MessageController::class, 'index'])
+        Route::get('/chats/{chat}/messages', [MessageIndexController::class, 'index'])
             ->name('messages.index');
     });
 
     // ---- Messages ----
     Route::name('messages.')->group(function () {
-        Route::post('/messages',        [MessageController::class, 'store'])->name('store');
-        Route::post('/messages/stream', [MessageController::class, 'storeStream'])->name('stream');
+        Route::post('/messages',        [MessageSendController::class, 'store'])->name('store');
+        Route::post('/messages/stream', [MessageStreamController::class, 'stream'])->name('stream');
     });
 
     // Admin user management

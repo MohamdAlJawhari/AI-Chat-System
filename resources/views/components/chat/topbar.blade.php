@@ -356,7 +356,11 @@
                     style="background: var(--surface); border: 1px solid var(--border-muted); color: var(--text);">
                     @foreach($personaOptions as $persona)
                         <option value="{{ $persona }}" @if($persona === $defaultPersona) selected @endif>
-                            {{ ucfirst(str_replace('_', ' ', $persona)) }}
+                            @if($persona === 'auto')
+                                Auto (AI picks)
+                            @else
+                                {{ ucfirst(str_replace('_', ' ', $persona)) }}
+                            @endif
                         </option>
                     @endforeach
                 </select>

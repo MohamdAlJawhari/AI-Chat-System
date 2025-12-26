@@ -43,7 +43,29 @@ return [
 
     // Personas
     'personas' => [
-        'allowed' => ['assistant', 'author', 'reporter', 'summarizer'],
+        'allowed' => ['auto', 'assistant', 'author', 'reporter', 'summarizer'],
+
+        // Simple, transparent routing rules for when the user picks "Auto"
+        'router' => [
+            // If nothing matches, fall back to this persona
+            'fallback' => 'assistant',
+            // Keyword contains-matching, evaluated top to bottom
+            'rules' => [
+                'summarizer' => [
+                    'summarize', 'summarise', 'summary', 'summaries', 'tl;dr', 'tldr',
+                    'short version', 'shorten', 'condense', 'brief', 'recap', 'digest',
+                ],
+                'reporter' => [
+                    'breaking', 'latest', 'update', 'updates', 'live', 'live blog', 'live coverage',
+                    'what happened', 'what happened today', 'what is happening', 'on the ground', 'dispatch',
+                ],
+                'author' => [
+                    'write an article', 'write article', 'create an article', 'draft article',
+                    'rewrite', 'opinion', 'feature', 'feature story', 'longform', 'story idea',
+                    'compose article', 'news article', 'write a story',
+                ],
+            ], 
+        ],
 
         'assistant' => [
             'system' => env(

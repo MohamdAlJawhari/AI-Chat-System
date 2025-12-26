@@ -67,12 +67,23 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
     const phraseEl = el('div','text-[12px] font-semibold tracking-wide', phrases[phraseIdx]);
     phraseEl.style.color = 'rgba(200, 200, 200, 0.29)';
 
-    const personaName = (elements.personaSelect && elements.personaSelect.value) ? elements.personaSelect.value : '';
-    const personaLabel = personaName ? personaName.replace(/_/g,' ') : '';
+    const requestedPersona = (elements.personaSelect && elements.personaSelect.value) ? elements.personaSelect.value : '';
+    let personaTag = null;
+    const setPersonaTag = (label, reason='') => {
+      const cleanLabel = (label || '').trim();
+      if (!cleanLabel) return;
+      if (!personaTag) {
+        personaTag = el('div','text-[11px] uppercase tracking-[0.2em]');
+        personaTag.style.color = 'rgba(140,167,255,0.9)';
+        statusBox.prepend(personaTag);
+      }
+      personaTag.textContent = cleanLabel;
+      personaTag.title = reason || '';
+    };
+    const personaLabel = requestedPersona ? requestedPersona.replace(/_/g,' ') : '';
     if (personaLabel) {
-      const personaTag = el('div','text-[11px] uppercase tracking-[0.2em]', personaLabel);
-      personaTag.style.color = 'rgba(140,167,255,0.9)';
-      statusBox.appendChild(personaTag);
+      const initialLabel = requestedPersona === 'auto' ? 'Auto' : personaLabel;
+      setPersonaTag(initialLabel);
     }
 
     const timer = el('div','three-body-timer text-[12px]', '0.0s');
@@ -147,6 +158,15 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
             if (typeof assistant._setArchiveBadge === 'function') {
               assistant._setArchiveBadge(assistant._archiveEnabled);
             }
+          }
+          if (evt.persona) {
+            const resolvedLabel = evt.persona.replace(/_/g,' ');
+            const label = evt.persona_auto ? `Auto → ${resolvedLabel}` : resolvedLabel;
+            const reason = evt.persona_reason || '';
+            setPersonaTag(label, reason);
+            assistant._persona = evt.persona;
+            assistant._personaRequested = evt.persona_requested;
+            assistant._personaReason = reason;
           }
           if (evt.delta) {
             if (assistant._thinkingEl) {
