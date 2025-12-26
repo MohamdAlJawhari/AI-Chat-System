@@ -10,30 +10,27 @@ class LlmClient
     public function chat(array $messages, ?string $model = null, array $options = []): string
     {
         $base = rtrim((string) config('llm.base_url'), '/');
-        // Be forgiving about whitespace in env/config
         $model = trim($model ?? (string) config('llm.model'));
 
-        // Merge config defaults once, centrally
-        $defaults = array_filter(config('llm.defaults', []), fn($v) => $v !== null && $v !== '');
+        // Merge config defaults + runtime options
+        $defaults = config('llm.defaults', []);
         $opts = array_merge($defaults, $options);
 
-        // Allow caller to pass a custom HTTP timeout via options
-        $httpTimeout = 120;
-        if (isset($options['http_timeout'])) {
-            $httpTimeout = (int) $options['http_timeout'];
-            unset($options['http_timeout']);
-        }
+        // Pull out http_timeout so it doesn't go to Ollama payload
+        $httpTimeout = (int) ($opts['http_timeout'] ?? 120);
+        unset($opts['http_timeout']);
 
-        $payload = array_merge([
+        $payload = [
             'model' => $model,
             'messages' => $messages,
             'stream' => false,
-        ], $options);
+            'options' => $opts, // ✅ Ollama expects generation params under "options"
+        ];
 
-        $res = Http::timeout($httpTimeout)->post("$base/api/chat", $payload);
+        $res = Http::timeout($httpTimeout)->post("$base/api/chat", $payload)->throw();
         $json = $res->json();
 
-        return data_get($json, 'message.content', '');
+        return (string) data_get($json, 'message.content', '');
     }
 
     /** To see what models are available in the LLM server.

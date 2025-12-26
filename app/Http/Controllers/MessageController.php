@@ -55,6 +55,46 @@ class MessageController extends Controller
         return $rag;
     }
 
+    /**
+     * Resolve the active persona (name, system prompt, overrides) for a chat.
+     *
+     * @return array{name:string,system:string,overrides:array<string,mixed>}
+     */
+    private function resolvePersona(Chat $chat): array
+    {
+        $personaConfig = config('llm.personas', []);
+        $allowed = $personaConfig['allowed'] ?? [];
+        $defaultName = (string) config('llm.default_persona', 'assistant');
+        $requested = (string) data_get($chat->settings, 'persona', '');
+        $name = in_array($requested, $allowed, true) ? $requested : $defaultName;
+
+        $persona = $personaConfig[$name] ?? [];
+        $fallback = $personaConfig[$defaultName] ?? [];
+
+        $system = (string) ($persona['system'] ?? ($fallback['system'] ?? 'You are UChat, a helpful media assistant. Be concise and accurate.'));
+        $overrides = is_array($persona['overrides'] ?? null) ? $persona['overrides'] : [];
+
+        return [
+            'name' => $name,
+            'system' => $system,
+            'overrides' => $overrides,
+        ];
+    }
+
+    /**
+     * Merge persona overrides with default LLM options for the streaming payload (excludes HTTP-only keys).
+     */
+    private function buildLlmOptions(array $overrides = []): array
+    {
+        $defaults = is_array(config('llm.defaults')) ? config('llm.defaults') : [];
+        $merged = array_merge($defaults, $overrides);
+        $allowedKeys = ['temperature', 'top_p', 'top_k', 'repeat_penalty', 'num_ctx', 'seed'];
+
+        return array_filter($merged, function ($value, $key) use ($allowedKeys) {
+            return in_array($key, $allowedKeys, true) && $value !== null;
+        }, ARRAY_FILTER_USE_BOTH);
+    }
+
     // Return messages for a chat (oldest first)
     public function index(Chat $chat)
     {
@@ -211,8 +251,9 @@ class MessageController extends Controller
         $history = $chat->messages()->orderBy('created_at')->take(20)->get();
         $messages = [];
 
-        if ($sp = config('llm.default_persona')) {
-            $messages[] = ['role' => 'system', 'content' => $sp];
+        $persona = $this->resolvePersona($chat);
+        if ($persona['system'] !== '') {
+            $messages[] = ['role' => 'system', 'content' => $persona['system']];
         }
 
         $rag = $this->attachArchiveContext($useArchive, $incomingContent, $messages, $searchFilters);
@@ -226,7 +267,7 @@ class MessageController extends Controller
 
         // 3) Call local LLM (Ollama)
         $modelFromSettings = data_get($chat->settings, 'model'); // optional override per chat
-        $assistantText = app(\App\Services\LlmClient::class)->chat($messages, $modelFromSettings);
+        $assistantText = app(\App\Services\LlmClient::class)->chat($messages, $modelFromSettings, $persona['overrides']);
 
         // 4) Save assistant reply
         $assistant = Message::create([
@@ -240,6 +281,7 @@ class MessageController extends Controller
                 'archive_search' => $useArchive ?: null,
                 'sources' => !empty($ragSources) ? $ragSources : null,
                 'filters' => $useArchive ? $filtersForMetadata : null,
+                'persona' => $persona['name'] ?? null,
             ], fn($v) => $v !== null && $v !== []),
         ]);
 
@@ -309,8 +351,9 @@ class MessageController extends Controller
 
         $history = $chat->messages()->orderBy('created_at')->take(20)->get();
         $messages = [];
-        if ($sp = config('llm.default_persona')) {
-            $messages[] = ['role' => 'system', 'content' => $sp];
+        $persona = $this->resolvePersona($chat);
+        if ($persona['system'] !== '') {
+            $messages[] = ['role' => 'system', 'content' => $persona['system']];
         }
 
         $rag = $this->attachArchiveContext($useArchive, $incomingContent, $messages, $searchFilters);
@@ -325,12 +368,13 @@ class MessageController extends Controller
         $modelFromSettings = data_get($chat->settings, 'model');
         $base = rtrim((string) config('llm.base_url'), '/');
         $model = trim($modelFromSettings ?? (string) config('llm.model'));
+        $llmOptions = $this->buildLlmOptions($persona['overrides']);
 
-        $payload = [
+        $payload = array_merge([
             'model' => $model,
             'messages' => $messages,
             'stream' => true,
-        ];
+        ], $llmOptions);
 
         $httpRes = \Illuminate\Support\Facades\Http::withOptions(['stream' => true, 'timeout' => 0])
             ->post("$base/api/chat", $payload);
@@ -345,7 +389,7 @@ class MessageController extends Controller
 
         $assistantId = (string) \Illuminate\Support\Str::uuid();
 
-        return response()->stream(function () use ($httpRes, $chat, $assistantId, $model, $ragSources, $useArchive, $filtersForMetadata) {
+        return response()->stream(function () use ($httpRes, $chat, $assistantId, $model, $ragSources, $useArchive, $filtersForMetadata, $persona) {
             // Continue processing even if client disconnects
             @ignore_user_abort(true);
             $body = $httpRes->toPsrResponse()->getBody();
@@ -355,8 +399,11 @@ class MessageController extends Controller
             $assistantCreated = false;
             $lastPersistLen = 0;
 
-            $buildAssistantMetadata = function (string $modelName) use ($useArchive, $ragSources, $filtersForMetadata): array {
-                $meta = ['model' => $modelName];
+            $buildAssistantMetadata = function (string $modelName) use ($useArchive, $ragSources, $filtersForMetadata, $persona): array {
+                $meta = [
+                    'model' => $modelName,
+                    'persona' => $persona['name'] ?? null,
+                ];
                 if ($useArchive) {
                     $meta['archive_search'] = true;
                     if (!empty($ragSources)) {

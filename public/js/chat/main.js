@@ -46,6 +46,22 @@ function initUserMenu(){
   btn.addEventListener('click', (e)=>{ e.stopPropagation(); if (menu.classList.contains('hidden')) open(); else close(); });
 }
 
+function applyChatSelectors(chat){
+  const { modelSelect, personaSelect } = elements;
+  if (personaSelect) {
+    const defaultPersona = personaSelect.dataset.defaultPersona || (personaSelect.options[0]?.value || '');
+    const persona = (chat?.settings?.persona) || defaultPersona;
+    if (persona && [...personaSelect.options].some(o => o.value === persona)) {
+      personaSelect.value = persona;
+    } else if (defaultPersona) {
+      personaSelect.value = defaultPersona;
+    }
+  }
+  if (modelSelect && chat?.settings?.model && [...modelSelect.options].some(o=>o.value===chat.settings.model)) {
+    modelSelect.value = chat.settings.model;
+  }
+}
+
 function initArchiveSwitch(){
   const toggle = elements.archiveToggle;
   const badge = elements.archiveModeBadge;
@@ -100,14 +116,27 @@ async function loadChats(){
   })));
   if (!state.currentChatId && chats[0]){
     state.currentChatId = chats[0].id; const cur = chats[0];
-    if (cur?.settings?.model && [...modelSelect.options].some(o=>o.value===cur.settings.model)) modelSelect.value = cur.settings.model;
+    applyChatSelectors(cur);
     await loadMessages();
+  } else {
+    const current = (state.chatsCache || []).find(c => c.id === state.currentChatId);
+    if (current) applyChatSelectors(current);
   }
   return chats;
 }
 
 /** Ensure a chat exists and return its id (creates a new one if needed). */
-async function createChatIfNeeded(){ if (state.currentChatId) return state.currentChatId; const chat = await apiPost('/api/chats',{ settings:{ model: elements.modelSelect.value }}); state.currentChatId = chat.id; await loadChats(); return state.currentChatId; }
+async function createChatIfNeeded(){
+  if (state.currentChatId) return state.currentChatId;
+  const payload = { settings:{ model: elements.modelSelect.value } };
+  if (elements.personaSelect && elements.personaSelect.value) {
+    payload.settings.persona = elements.personaSelect.value;
+  }
+  const chat = await apiPost('/api/chats', payload);
+  state.currentChatId = chat.id;
+  await loadChats();
+  return state.currentChatId;
+}
 
 /** Main boot function that wires up everything. */
 async function bootstrap(){
@@ -150,6 +179,18 @@ async function bootstrap(){
   elements.sendBtn.addEventListener('click', ()=>{ removeEmptyState(); sendMessage(state,{ createChatIfNeeded, loadMessages, loadChats }); });
   elements.composer.addEventListener('keydown', (e)=>{ if (e.key==='Enter' && !e.shiftKey){ e.preventDefault(); removeEmptyState(); sendMessage(state,{ createChatIfNeeded, loadMessages, loadChats }); }});
   elements.modelSelect.addEventListener('change', async ()=>{ if (state.currentChatId){ try{ await apiPatch(`/api/chats/${state.currentChatId}`, { settings:{ model: elements.modelSelect.value } }); await loadChats(); }catch(e){ console.error('Failed to update chat model', e); } }});
+  if (elements.personaSelect){
+    elements.personaSelect.addEventListener('change', async ()=>{
+      if (state.currentChatId){
+        try{
+          await apiPatch(`/api/chats/${state.currentChatId}`, { settings:{ persona: elements.personaSelect.value } });
+          await loadChats();
+        }catch(e){
+          console.error('Failed to update chat persona', e);
+        }
+      }
+    });
+  }
   if (elements.themeToggle){ elements.themeToggle.addEventListener('click', ()=>{ const isDark = document.documentElement.classList.contains('dark'); setTheme(isDark ? 'light' : 'dark'); }); }
   window.addEventListener('keydown', async (e)=>{ const k = e.key?e.key.toLowerCase():''; if ((e.ctrlKey||e.metaKey) && k==='n'){ e.preventDefault(); state.currentChatId=null; await createChatIfNeeded(); await loadMessages(); await loadChats(); }});
 }

@@ -59,14 +59,38 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
     const thinking = el('div','inline-block');
     const loaderBox = el('div','relative inline-block align-middle three-body-wrap');
     loaderBox.innerHTML = '<div class="three-body"><div class="three-body__dot"></div><div class="three-body__dot"></div><div class="three-body__dot"></div></div>';
-    const timer = el('div','three-body-timer select-none','0.0s');
-    loaderBox.appendChild(timer);
+
+    const statusBox = el('div','mt-1 flex items-center gap-2 select-none');
+
+    const phrases = ['Hmmm...','Let me see...','Almost there...','On it...','One sec...'];
+    let phraseIdx = Math.floor(Math.random() * phrases.length);
+    const phraseEl = el('div','text-[12px] font-semibold tracking-wide', phrases[phraseIdx]);
+    phraseEl.style.color = 'rgba(200, 200, 200, 0.29)';
+
+    const personaName = (elements.personaSelect && elements.personaSelect.value) ? elements.personaSelect.value : '';
+    const personaLabel = personaName ? personaName.replace(/_/g,' ') : '';
+    if (personaLabel) {
+      const personaTag = el('div','text-[11px] uppercase tracking-[0.2em]', personaLabel);
+      personaTag.style.color = 'rgba(140,167,255,0.9)';
+      statusBox.appendChild(personaTag);
+    }
+
+    const timer = el('div','three-body-timer text-[12px]', '0.0s');
+    timer.style.color = 'rgba(195,209,231,0.9)';
+
+    statusBox.appendChild(phraseEl);
+    statusBox.appendChild(timer);
+    loaderBox.appendChild(statusBox);
+
     thinking.appendChild(loaderBox);
     assistant._contentEl.appendChild(thinking);
     assistant._thinkingEl = thinking;
     assistant._waitTimer = setInterval(()=>{
       const s = (performance.now() - waitStart)/1000;
       timer.textContent = s.toFixed(1) + 's';
+      if (s >= 1 && s < 4 && phraseIdx !== 1) { phraseIdx = 1; phraseEl.textContent = phrases[1]; }
+      else if (s >= 4 && s < 9 && phraseIdx !== 2) { phraseIdx = 2; phraseEl.textContent = phrases[2]; }
+      else if (s >= 9 && phraseIdx !== 3) { phraseIdx = 3; phraseEl.textContent = phrases[3]; }
     }, 100);
 
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';

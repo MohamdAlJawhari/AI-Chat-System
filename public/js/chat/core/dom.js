@@ -13,6 +13,7 @@ export const el = (tag, cls = '', text = '') => {
 export const elements = {
   get chatListEl() { return document.getElementById('chatList'); },
   get modelSelect() { return document.getElementById('modelSelect'); },
+  get personaSelect() { return document.getElementById('personaSelect'); },
   get messagesEl() { return document.getElementById('messages'); },
   get composer() { return document.getElementById('composer'); },
   get newChatBtn() { return document.getElementById('newChatBtn'); },

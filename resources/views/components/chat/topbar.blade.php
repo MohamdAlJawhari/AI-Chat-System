@@ -146,12 +146,33 @@
             box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
             text-transform: none ;
         }
+
+        /* Keep top-row controls vertically centered and aligned */
+        .chat-top-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .chat-top-controls select,
+        .chat-top-controls button,
+        .chat-top-controls label {
+            align-self: center;
+        }
+        .chat-top-archive {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
     </style>
 @endonce
 
 @php
     $defaultAlpha = number_format((float) config('rag.alpha', 0.80), 2, '.', '');
     $defaultBeta = number_format((float) config('rag.beta', 0.20), 2, '.', '');
+    $personaOptions = config('llm.personas.allowed', []);
+    $defaultPersona = config('llm.default_persona', 'assistant');
 @endphp
 
 <header class="relative z-40 p-3 border-b backdrop-blur flex items-center justify-between gap-3"
@@ -164,8 +185,8 @@
         </button>
     </div>
 
-    <div class="absolute left-1/2 -translate-x-1/2 flex justify-center">
-        <form method="get" action="{{ route('search') }}" class="hidden xl:flex items-center gap-6 relative">
+    <div class="flex-1 flex justify-center">
+        <form method="get" action="{{ route('search') }}" class="hidden xl:flex items-center gap-4 relative">
             <details class="chat-control-panel relative" closed>
                 <summary
                     class="cursor-pointer rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted hover:text-white transition"
@@ -313,8 +334,8 @@
         </a>
     </div>
 
-    <div class="flex items-center gap-4">
-        <div class="flex items-center gap-3 pr-4 border-r" style="border-color: var(--border-muted);">
+    <div class="chat-top-controls">
+        <div class="chat-top-archive pr-4 border-r" style="border-color: var(--border-muted);">
             <div class="flex flex-col leading-tight">
                 <span class="text-[11px] uppercase tracking-[0.35em] text-muted">Archive</span>
                 <span id="archiveModeBadge" class="text-xs font-semibold" style="color: var(--text);">Off</span>
@@ -327,7 +348,19 @@
                     class="pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow transition peer-checked:translate-x-5 peer-checked:bg-white/90"></span>
             </label>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
+                <label class="text-sm" style="color: color-mix(in srgb, var(--text) 70%, transparent)">Persona</label>
+                <select id="personaSelect" data-default-persona="{{ $defaultPersona }}"
+                    class="rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                    style="background: var(--surface); border: 1px solid var(--border-muted); color: var(--text);">
+                    @foreach($personaOptions as $persona)
+                        <option value="{{ $persona }}" @if($persona === $defaultPersona) selected @endif>
+                            {{ ucfirst(str_replace('_', ' ', $persona)) }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
             <label class="text-sm" style="color: color-mix(in srgb, var(--text) 70%, transparent)">Model</label>
             <select id="modelSelect"
                 class="rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[var(--accent)]"
