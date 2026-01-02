@@ -12,6 +12,8 @@ class LlmClient
         $base = rtrim((string) config('llm.base_url'), '/');
         $model = trim($model ?? (string) config('llm.model'));
 
+        app(OllamaManager::class)->ensureRunning($base);
+
         // Merge config defaults + runtime options
         $defaults = config('llm.defaults', []);
         $opts = array_merge($defaults, $options);
