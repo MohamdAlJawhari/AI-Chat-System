@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\News;
 use Illuminate\Support\Facades\DB;
 
 class HybridSearchService
@@ -88,7 +89,7 @@ class HybridSearchService
             FROM hybrid_search_docs(?, {$vecStr}, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ";
 
-        return DB::select($sql, [
+        $results = DB::select($sql, [
             $query,   // query_text
             $kDocs,   // k_docs
             $perDoc,  // per_doc
@@ -101,6 +102,31 @@ class HybridSearchService
             $dateFrom, // date_from filter
             $dateTo,   // date_to filter
         ]);
+
+        if (!$results) {
+            return [];
+        }
+
+        $newsIds = [];
+        foreach ($results as $row) {
+            if (!empty($row->news_id)) {
+                $newsIds[] = (int) $row->news_id;
+            }
+        }
+        $newsIds = array_values(array_unique($newsIds));
+
+        if ($newsIds) {
+            $newsById = News::query()
+                ->whereIn('id', $newsIds)
+                ->get()
+                ->keyBy('id');
+
+            foreach ($results as $row) {
+                $row->news = $newsById->get((int) $row->news_id);
+            }
+        }
+
+        return $results;
     }
 
     private function nullIfEmpty(mixed $value): ?string

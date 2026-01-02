@@ -304,6 +304,42 @@
                             </details>
                         @endif
 
+                        @php
+                            $newsItem = $r->news ?? null;
+                        @endphp
+                        @if($newsItem)
+                            <details class="mt-4 overflow-hidden rounded-xl border" style="border-color: rgba(255, 255, 255, 0.08); background: rgba(0, 0, 0, 0.22);">
+                                <summary class="flex cursor-pointer items-center gap-3 px-4 py-3 text-sm font-medium text-muted transition hover:text-[var(--accent)]">
+                                    <span class="chevron-icon flex h-7 w-7 items-center justify-center rounded-full border text-xs" style="border-color: rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05);">
+                                        <i class="fa-solid fa-chevron-right"></i>
+                                    </span>
+                                    Show full record
+                                </summary>
+                                <div class="border-t px-4 py-4 text-sm leading-7 sm:text-base" style="border-color: rgba(255, 255, 255, 0.08); color: rgba(240, 244, 255, 0.88);">
+                                    <dl class="grid gap-4 sm:grid-cols-2">
+                                        @foreach($newsItem->toArray() as $key => $value)
+                                            @php
+                                                $displayValue = $value;
+                                                if (is_array($displayValue)) {
+                                                    $displayValue = count($displayValue) ? implode(', ', $displayValue) : '-';
+                                                } elseif (is_bool($displayValue)) {
+                                                    $displayValue = $displayValue ? 'true' : 'false';
+                                                } elseif ($displayValue === null || $displayValue === '') {
+                                                    $displayValue = '-';
+                                                }
+                                            @endphp
+                                            <div class="space-y-1">
+                                                <dt class="text-[11px] uppercase tracking-[0.2em] text-muted">{{ \Illuminate\Support\Str::headline($key) }}</dt>
+                                                <dd class="text-sm leading-6" style="color: rgba(240, 244, 255, 0.88);">
+                                                    <span class="whitespace-pre-wrap break-words">{{ $displayValue }}</span>
+                                                </dd>
+                                            </div>
+                                        @endforeach
+                                    </dl>
+                                </div>
+                            </details>
+                        @endif
+
                         <div class="mt-4 text-xs uppercase tracking-[0.22em] text-muted">Relevance score {{ number_format($r->doc_score, 3) }}</div>
                     </article>
                 @empty
