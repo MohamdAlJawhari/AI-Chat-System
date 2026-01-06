@@ -16,7 +16,7 @@ class ArchiveRagService
      */
     public function buildContext(string $query, ?int $limit = null, array $filters = []): array
     {
-        $limit = $limit ?? (int) config('rag.doc_limit', 16);
+        $limit = $limit ?? (int) config('rag.doc_limit', 15);
         $results = $this->search->searchDocuments($query, [
             'limit' => $limit,
             'filters' => $filters,

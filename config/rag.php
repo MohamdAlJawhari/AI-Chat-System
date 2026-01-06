@@ -2,7 +2,7 @@
 
 return [
     // Default number of archive documents to fetch for RAG responses
-    'doc_limit' => (int) env('RAG_DOC_LIMIT', 10),
+    'doc_limit' => (int) env('RAG_DOC_LIMIT', 15),
 
     // How many chunks per document the hybrid function should consider internally
     'per_doc' => (int) env('RAG_PER_DOC', 3),
