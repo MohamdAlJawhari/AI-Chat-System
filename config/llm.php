@@ -50,21 +50,21 @@ return [
             // If nothing matches, fall back to this persona
             'fallback' => 'assistant',
             // Keyword contains-matching, evaluated top to bottom
-            'rules' => [
-                'summarizer' => [
-                    'summarize', 'summarise', 'summary', 'summaries', 'tl;dr', 'tldr',
-                    'short version', 'shorten', 'condense', 'brief', 'recap', 'digest',
-                ],
-                'reporter' => [
-                    'breaking', 'latest', 'update', 'updates', 'live', 'live blog', 'live coverage',
-                    'what happened', 'what happened today', 'what is happening', 'on the ground', 'dispatch',
-                ],
-                'author' => [
-                    'write an article', 'write article', 'create an article', 'draft article',
-                    'rewrite', 'opinion', 'feature', 'feature story', 'longform', 'story idea',
-                    'compose article', 'news article', 'write a story',
-                ],
-            ], 
+            // 'rules' => [
+            //     'summarizer' => [
+            //         'summarize', 'summarise', 'summary', 'summaries', 'tl;dr', 'tldr',
+            //         'short version', 'shorten', 'condense', 'brief', 'recap', 'digest',
+            //     ],
+            //     'reporter' => [
+            //         'breaking', 'latest', 'update', 'updates', 'live', 'live blog', 'live coverage',
+            //         'what happened', 'what happened today', 'what is happening', 'on the ground', 'dispatch',
+            //     ],
+            //     'author' => [
+            //         'write an article', 'write article', 'create an article', 'draft article',
+            //         'rewrite', 'opinion', 'feature', 'feature story', 'longform', 'story idea',
+            //         'compose article', 'news article', 'write a story',
+            //     ],
+            // ], 
         ],
 
         'assistant' => [
@@ -110,6 +110,7 @@ return [
         'top_k' => (int) env('LLM_TOP_K', 40),
         'repeat_penalty' => (float) env('LLM_REPEAT_PENALTY', 1.07),
         'num_ctx' => (int) env('LLM_NUM_CTX', 4096),
+        'num_predict' => (int) env('LLM_NUM_PREDICT', 1024),
         'http_timeout' => (int) env('LLM_HTTP_TIMEOUT', 120),
     ],
 ];

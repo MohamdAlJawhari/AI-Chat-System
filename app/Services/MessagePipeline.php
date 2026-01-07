@@ -192,7 +192,7 @@ class MessagePipeline
     {
         $defaults = is_array(config('llm.defaults')) ? config('llm.defaults') : [];
         $merged = array_merge($defaults, $overrides);
-        $allowedKeys = ['temperature', 'top_p', 'top_k', 'repeat_penalty', 'num_ctx', 'seed'];
+        $allowedKeys = ['temperature', 'top_p', 'top_k', 'repeat_penalty', 'num_ctx', 'num_predict', 'seed'];
 
         return array_filter($merged, function ($value, $key) use ($allowedKeys) {
             return in_array($key, $allowedKeys, true) && $value !== null;

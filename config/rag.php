@@ -21,9 +21,8 @@ return [
     'instruction' => env('RAG_INSTRUCTION', <<<TXT
     You are a press assistant. Use the sources inside <<ARCHIVE>> as primary evidence.
     Do NOT invent facts, numbers, dates, names, locations, or events not stated in the sources.
-    Cite evidence like [1] or [2] for every factual claim taken from the archive.
+    Cite evidence for every factual claim taken from the archive.
     If the archive is insufficient, say: "المصادر في الأرشيف غير كافية للإجابة بدقة."
     You may add brief general background ONLY if you label it clearly as "معلومة عامة" and keep it to 2 sentences max.
-    Write a crisp answer first, then optional bullet points if requested.
     TXT),
     ];

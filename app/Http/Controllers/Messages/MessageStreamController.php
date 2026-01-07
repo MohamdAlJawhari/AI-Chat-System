@@ -88,11 +88,14 @@ class MessageStreamController extends Controller
         $model = trim($modelFromSettings ?? (string) config('llm.model'));
         $llmOptions = $this->pipeline->buildLlmOptions($persona['overrides']);
 
-        $payload = array_merge([
+        $payload = [
             'model' => $model,
             'messages' => $messages,
             'stream' => true,
-        ], $llmOptions);
+        ];
+        if (!empty($llmOptions)) {
+            $payload['options'] = $llmOptions;
+        }
 
         $httpRes = \Illuminate\Support\Facades\Http::withOptions(['stream' => true, 'timeout' => 0])
             ->post("$base/api/chat", $payload);
@@ -109,6 +112,7 @@ class MessageStreamController extends Controller
 
         return response()->stream(function () use ($httpRes, $chat, $assistantId, $model, $ragSources, $useArchive, $filtersForMetadata, $persona) {
             @ignore_user_abort(true);
+            @set_time_limit(0); // avoid PHP max_execution_time cutting long streams
             $body = $httpRes->toPsrResponse()->getBody();
             $buffer = '';
             $assistantText = '';
@@ -240,4 +244,3 @@ class MessageStreamController extends Controller
         ]);
     }
 }
-

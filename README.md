@@ -44,6 +44,7 @@ UChat is a lightweight ChatGPT‑style web app built with Laravel. It talks to a
   - `LLM_BASE_URL=http://127.0.0.1:11434`
   - `LLM_MODEL=gpt-oss:20b` (no trailing spaces)
   - `LLM_MODEL2=openchat` (second selectable model)
+  - `LLM_NUM_PREDICT=1024` (max output tokens; increase if replies cut off)
 - Database (example for Postgres)
   - `DB_CONNECTION=pgsql`
   - `DB_HOST=127.0.0.1`
@@ -158,6 +159,7 @@ Headers
 - Default base URL: `LLM_BASE_URL` (`http://127.0.0.1:11434`)
 - Models: `LLM_MODEL` and `LLM_MODEL2` define the dropdown options and defaults.
 - System prompt: `LLM_SYSTEM` (used on every conversation start)
+- Max output tokens: `LLM_NUM_PREDICT` (increase if responses stop early)
 
 ## Troubleshooting
 
