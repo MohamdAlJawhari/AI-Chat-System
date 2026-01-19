@@ -168,7 +168,7 @@ class MessagePipeline
      * @param  array<int, array<string, string>>  $messages
      * @param  array<string,mixed>  $filters
      * @param  array<string,float>  $weights
-     * @return array{context:?string,sources:array<int,array<string,mixed>>}
+     * @return array{context:?string,sources:array<int,array<string,mixed>>,query?:string,query_original?:string,query_rewrite?:array<string,mixed>}
      */
     public function attachArchiveContext(bool $enabled, ?string $query, array &$messages, array $filters = [], array $weights = []): array
     {

@@ -6,6 +6,7 @@ class ArchiveRagService
 {
     public function __construct(
         private readonly HybridSearchService $search,
+        private readonly ArchiveQueryRewriter $rewriter,
     ) {
     }
 
@@ -14,11 +15,14 @@ class ArchiveRagService
      *
      * @param  array<string,mixed>  $filters
      * @param  array<string,float>  $weights
-     * @return array{context:?string,sources:array<int,array<string,mixed>>}
+     * @return array{context:?string,sources:array<int,array<string,mixed>>,query:string,query_original:string,query_rewrite:array<string,mixed>}
      */
     public function buildContext(string $query, ?int $limit = null, array $filters = [], array $weights = []): array
     {
         $limit = $limit ?? (int) config('rag.doc_limit', 15);
+        $originalQuery = trim($query);
+        $rewrite = $this->rewriter->rewrite($originalQuery);
+        $searchQuery = $rewrite['query'] !== '' ? $rewrite['query'] : $originalQuery;
         $options = [
             'limit' => $limit,
             'filters' => $filters,
@@ -30,10 +34,16 @@ class ArchiveRagService
             $options['beta'] = $weights['beta'];
         }
 
-        $results = $this->search->searchDocuments($query, $options);
+        $results = $this->search->searchDocuments($searchQuery, $options);
 
         if (empty($results)) {
-            return ['context' => null, 'sources' => []];
+            return [
+                'context' => null,
+                'sources' => [],
+                'query' => $searchQuery,
+                'query_original' => $originalQuery,
+                'query_rewrite' => $rewrite,
+            ];
         }
 
         $instruction = trim((string) config('rag.instruction', ''));
@@ -93,6 +103,9 @@ class ArchiveRagService
         return [
             'context' => $context !== '' ? $context : null,
             'sources' => $sources,
+            'query' => $searchQuery,
+            'query_original' => $originalQuery,
+            'query_rewrite' => $rewrite,
         ];
     }
 

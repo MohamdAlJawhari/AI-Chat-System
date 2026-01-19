@@ -14,6 +14,10 @@
 
     <x-search.page
         :q="$q"
+        :query_original="$query_original ?? $q"
+        :query_used="$query_used ?? $q"
+        :query_rewrite="$query_rewrite ?? null"
+        :query_rewrite_applied="$query_rewrite_applied ?? false"
         :results="$results"
         :limit="$limit"
         :pagination="$pagination"

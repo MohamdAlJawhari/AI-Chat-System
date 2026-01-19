@@ -13,6 +13,15 @@ use Carbon\CarbonImmutable;
 
 class ArchiveFilterRouter
 {
+    private const FILTER_KEYS = [
+        'country',
+        'category',
+        'city',
+        'date_from',
+        'date_to',
+        'is_breaking_news',
+    ];
+
     public function __construct(
         private readonly FilterOptionsService $options,
         private readonly CountryFilterRouter $countryRouter,
@@ -50,38 +59,52 @@ class ArchiveFilterRouter
         $rawFilters = [];
         $fallbacks = [];
         $llmUsed = false;
+        $enabledFilters = $this->enabledFilters();
+        $enabledMap = array_fill_keys($enabledFilters, true);
 
-        $countryResult = $this->countryRouter->route($content, $allowed['countries'] ?? [], $model, $llmOptions);
-        $llmUsed = $llmUsed || $countryResult['used'];
-        $rawFilters['country'] = $countryResult['value'];
-        if ($rawFilters['country'] === null) {
-            $fallback = $this->matchAllowed($content, $allowed['countries'] ?? []);
-            if ($fallback !== null) {
-                $rawFilters['country'] = $fallback;
-                $fallbacks[] = 'country';
+        if (isset($enabledMap['country'])) {
+            $countryResult = $this->countryRouter->route($content, $allowed['countries'] ?? [], $model, $llmOptions);
+            $llmUsed = $llmUsed || $countryResult['used'];
+            $rawFilters['country'] = $countryResult['value'];
+            if ($rawFilters['country'] === null) {
+                $fallback = $this->matchAllowed($content, $allowed['countries'] ?? []);
+                if ($fallback !== null) {
+                    $rawFilters['country'] = $fallback;
+                    $fallbacks[] = 'country';
+                }
             }
         }
 
-        $categoryResult = $this->categoryRouter->route($content, $allowed['categories'] ?? [], $model, $llmOptions);
-        $llmUsed = $llmUsed || $categoryResult['used'];
-        $rawFilters['category'] = $categoryResult['value'];
+        if (isset($enabledMap['category'])) {
+            $categoryResult = $this->categoryRouter->route($content, $allowed['categories'] ?? [], $model, $llmOptions);
+            $llmUsed = $llmUsed || $categoryResult['used'];
+            $rawFilters['category'] = $categoryResult['value'];
+        }
 
-        $cityResult = $this->cityRouter->route($content, $allowed['cities'] ?? [], $model, $llmOptions);
-        $llmUsed = $llmUsed || $cityResult['used'];
-        $rawFilters['city'] = $cityResult['value'];
+        if (isset($enabledMap['city'])) {
+            $cityResult = $this->cityRouter->route($content, $allowed['cities'] ?? [], $model, $llmOptions);
+            $llmUsed = $llmUsed || $cityResult['used'];
+            $rawFilters['city'] = $cityResult['value'];
+        }
 
         $dateRange = is_array($allowed['date_range'] ?? null) ? $allowed['date_range'] : null;
-        $dateFromResult = $this->dateFromRouter->route($content, $dateRange, $model, $llmOptions);
-        $llmUsed = $llmUsed || $dateFromResult['used'];
-        $rawFilters['date_from'] = $dateFromResult['value'];
+        if (isset($enabledMap['date_from'])) {
+            $dateFromResult = $this->dateFromRouter->route($content, $dateRange, $model, $llmOptions);
+            $llmUsed = $llmUsed || $dateFromResult['used'];
+            $rawFilters['date_from'] = $dateFromResult['value'];
+        }
 
-        $dateToResult = $this->dateToRouter->route($content, $dateRange, $model, $llmOptions);
-        $llmUsed = $llmUsed || $dateToResult['used'];
-        $rawFilters['date_to'] = $dateToResult['value'];
+        if (isset($enabledMap['date_to'])) {
+            $dateToResult = $this->dateToRouter->route($content, $dateRange, $model, $llmOptions);
+            $llmUsed = $llmUsed || $dateToResult['used'];
+            $rawFilters['date_to'] = $dateToResult['value'];
+        }
 
-        $breakingResult = $this->breakingRouter->route($content, $model, $llmOptions);
-        $llmUsed = $llmUsed || $breakingResult['used'];
-        $rawFilters['is_breaking_news'] = $breakingResult['value'];
+        if (isset($enabledMap['is_breaking_news'])) {
+            $breakingResult = $this->breakingRouter->route($content, $model, $llmOptions);
+            $llmUsed = $llmUsed || $breakingResult['used'];
+            $rawFilters['is_breaking_news'] = $breakingResult['value'];
+        }
 
         $filters = $this->normalizeFilters($rawFilters, $allowed);
 
@@ -89,7 +112,7 @@ class ArchiveFilterRouter
         $llmUsed = $llmUsed || $weightsResult['used'];
         $weights = $this->normalizeWeights($weightsResult['weights'], $defaultAlpha, $defaultBeta);
 
-        $reason = $this->buildReason($llmUsed, $fallbacks);
+        $reason = $this->buildReason($llmUsed, $fallbacks, $enabledFilters);
 
         return [
             'filters' => $filters,
@@ -121,17 +144,25 @@ class ArchiveFilterRouter
     /**
      * @param  array<int,string>  $fallbacks
      */
-    private function buildReason(bool $llmUsed, array $fallbacks): string
+    private function buildReason(bool $llmUsed, array $fallbacks, array $enabledFilters): string
     {
+        if (empty($enabledFilters)) {
+            return 'Auto router disabled: no filters enabled';
+        }
+
         if (!$llmUsed) {
-            return 'Auto router fallback: LLM unavailable';
+            $reason = 'Auto router fallback: LLM unavailable';
+        } elseif (empty($fallbacks)) {
+            $reason = 'LLM per-filter router applied';
+        } else {
+            $reason = 'LLM per-filter router applied (fallback: ' . implode(', ', $fallbacks) . ')';
         }
 
-        if (empty($fallbacks)) {
-            return 'LLM per-filter router applied';
+        if ($this->isFilterLimitActive($enabledFilters)) {
+            $reason .= ' (enabled: ' . implode(', ', $enabledFilters) . ')';
         }
 
-        return 'LLM per-filter router applied (fallback: ' . implode(', ', $fallbacks) . ')';
+        return $reason;
     }
 
     /**
@@ -306,5 +337,36 @@ class ArchiveFilterRouter
         }
 
         return $date;
+    }
+
+    /**
+     * @return array<int,string>
+     */
+    private function enabledFilters(): array
+    {
+        $raw = config('rag.auto_router.enabled_filters', []);
+        if (is_string($raw)) {
+            $raw = explode(',', $raw);
+        }
+        if (!is_array($raw)) {
+            return [];
+        }
+        $out = [];
+        foreach ($raw as $value) {
+            $value = strtolower(trim((string) $value));
+            if ($value === '') {
+                continue;
+            }
+            if (in_array($value, self::FILTER_KEYS, true)) {
+                $out[] = $value;
+            }
+        }
+        return array_values(array_unique($out));
+    }
+
+    private function isFilterLimitActive(array $enabledFilters): bool
+    {
+        $diff = array_diff(self::FILTER_KEYS, $enabledFilters);
+        return !empty($diff);
     }
 }

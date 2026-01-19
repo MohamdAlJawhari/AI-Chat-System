@@ -74,6 +74,18 @@ function normalizeBreaking(value) {
   return null;
 }
 
+function cleanText(value) {
+  if (value === null || value === undefined) return '';
+  return String(value).trim();
+}
+
+function truncateText(value, max = 90) {
+  const text = cleanText(value);
+  if (text === '' || text.length <= max) return text;
+  const cutoff = Math.max(0, max - 3);
+  return text.slice(0, cutoff).trim() + '...';
+}
+
 function summarizeFilters(filters) {
   if (!filters || typeof filters !== 'object' || Array.isArray(filters)) return '';
   const parts = [];
@@ -126,13 +138,21 @@ function mergeMeta(prev, incoming) {
   apply('archive_filters_auto', 'filters_auto');
   apply('weights_auto');
   apply('archive_weights_auto', 'weights_auto');
+  apply('query');
+  apply('query_original');
+  apply('query_rewrite');
   return merged;
 }
 
 function buildMetaLine(meta) {
   const autoFilters = !!meta.filters_auto;
   const autoWeights = !!meta.weights_auto;
-  if (!autoFilters && !autoWeights) return '';
+  const query = cleanText(meta.query);
+  const queryOriginal = cleanText(meta.query_original);
+  const hasQuery = query !== '' || queryOriginal !== '';
+  const hasFilters = !!(meta.filters && typeof meta.filters === 'object' && !Array.isArray(meta.filters) && Object.keys(meta.filters).length);
+  const hasWeights = !!(meta.weights && typeof meta.weights === 'object' && !Array.isArray(meta.weights) && Object.keys(meta.weights).length);
+  if (!autoFilters && !autoWeights && !hasQuery && !hasFilters && !hasWeights) return '';
 
   const parts = [];
   if (meta.model) parts.push(`Model: ${meta.model}`);
@@ -145,10 +165,22 @@ function buildMetaLine(meta) {
   }
   if (archiveFlag !== null) parts.push(`Archive: ${archiveFlag ? 'On' : 'Off'}`);
 
-  const filtersSummary = summarizeFilters(meta.filters);
-  parts.push(`Filters: ${filtersSummary || 'none'}`);
+  if (hasQuery) {
+    const normalizedOriginal = queryOriginal.toLowerCase();
+    const normalizedQuery = query.toLowerCase();
+    const rewritten = queryOriginal !== '' && query !== '' && normalizedOriginal !== normalizedQuery;
+    const displayQuery = rewritten
+      ? `${truncateText(query)}`
+      : truncateText(query || queryOriginal);
+    if (displayQuery) parts.push(`Query: ${displayQuery}`);
+  }
 
-  if (autoWeights) {
+  if (autoFilters || hasFilters) {
+    const filtersSummary = summarizeFilters(meta.filters);
+    parts.push(`Filters: ${filtersSummary || 'none'}`);
+  }
+
+  if (autoWeights || hasWeights) {
     const weightsSummary = summarizeWeights(meta.weights);
     if (weightsSummary) parts.push(`Weights: ${weightsSummary}`);
   }

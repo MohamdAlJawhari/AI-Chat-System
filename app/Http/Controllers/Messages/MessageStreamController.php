@@ -89,6 +89,12 @@ class MessageStreamController extends Controller
 
         $rag = $this->pipeline->attachArchiveContext($useArchive, $incomingContent, $messages, $searchFilters, $weights);
         $ragSources = $rag['sources'] ?? [];
+        $ragQuery = is_string($rag['query'] ?? null) ? trim((string) $rag['query']) : null;
+        $ragQueryOriginal = is_string($rag['query_original'] ?? null) ? trim((string) $rag['query_original']) : null;
+        $ragQueryRewrite = is_array($rag['query_rewrite'] ?? null) ? $rag['query_rewrite'] : null;
+        if ($ragQueryRewrite && !data_get($ragQueryRewrite, 'used')) {
+            $ragQueryRewrite = null;
+        }
 
         foreach ($history as $m) {
             if ($m->content === null) {
@@ -124,7 +130,7 @@ class MessageStreamController extends Controller
 
         $assistantId = (string) \Illuminate\Support\Str::uuid();
 
-        return response()->stream(function () use ($httpRes, $chat, $assistantId, $model, $ragSources, $useArchive, $filtersForMetadata, $weights, $autoMeta, $persona) {
+        return response()->stream(function () use ($httpRes, $chat, $assistantId, $model, $ragSources, $ragQuery, $ragQueryOriginal, $ragQueryRewrite, $useArchive, $filtersForMetadata, $weights, $autoMeta, $persona) {
             @ignore_user_abort(true);
             @set_time_limit(0); // avoid PHP max_execution_time cutting long streams
             $body = $httpRes->toPsrResponse()->getBody();
@@ -135,7 +141,7 @@ class MessageStreamController extends Controller
             $assistantCreated = false;
             $lastPersistLen = 0;
 
-            $buildAssistantMetadata = function (string $modelName) use ($useArchive, $ragSources, $filtersForMetadata, $weights, $autoMeta, $persona): array {
+            $buildAssistantMetadata = function (string $modelName) use ($useArchive, $ragSources, $ragQuery, $ragQueryOriginal, $ragQueryRewrite, $filtersForMetadata, $weights, $autoMeta, $persona): array {
                 $meta = [
                     'model' => $modelName,
                     'persona' => $persona['name'] ?? null,
@@ -148,6 +154,15 @@ class MessageStreamController extends Controller
                     $meta['archive_search'] = true;
                     if (!empty($ragSources)) {
                         $meta['sources'] = $ragSources;
+                    }
+                    if (!empty($ragQuery)) {
+                        $meta['query'] = $ragQuery;
+                    }
+                    if (!empty($ragQueryOriginal)) {
+                        $meta['query_original'] = $ragQueryOriginal;
+                    }
+                    if (!empty($ragQueryRewrite)) {
+                        $meta['query_rewrite'] = $ragQueryRewrite;
                     }
                     if (!empty($filtersForMetadata)) {
                         $meta['filters'] = $filtersForMetadata;
@@ -179,6 +194,9 @@ class MessageStreamController extends Controller
                 'model' => $modelUsed,
                 'archive_search' => $useArchive ? true : null,
                 'rag_sources' => $ragSources,
+                'query' => $ragQuery ?: null,
+                'query_original' => $ragQueryOriginal ?: null,
+                'query_rewrite' => $ragQueryRewrite ?: null,
                 'filters' => !empty($filtersForMetadata) ? $filtersForMetadata : null,
                 'weights' => !empty($weights) ? $weights : null,
                 'filters_auto' => data_get($autoMeta, 'filters.selected') ? true : null,

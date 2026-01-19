@@ -209,6 +209,9 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
           if (hasOwn(evt, 'weights')) metaPatch.weights = evt.weights;
           if (hasOwn(evt, 'filters_auto')) metaPatch.filters_auto = evt.filters_auto;
           if (hasOwn(evt, 'weights_auto')) metaPatch.weights_auto = evt.weights_auto;
+          if (hasOwn(evt, 'query')) metaPatch.query = evt.query;
+          if (hasOwn(evt, 'query_original')) metaPatch.query_original = evt.query_original;
+          if (hasOwn(evt, 'query_rewrite')) metaPatch.query_rewrite = evt.query_rewrite;
           if (Object.keys(metaPatch).length && typeof assistant._setMeta === 'function') {
             assistant._setMeta(metaPatch);
           }

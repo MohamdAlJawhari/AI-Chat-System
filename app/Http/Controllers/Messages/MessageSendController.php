@@ -107,6 +107,12 @@ class MessageSendController extends Controller
 
         $rag = $this->pipeline->attachArchiveContext($useArchive, $incomingContent, $messages, $searchFilters, $weights);
         $ragSources = $rag['sources'] ?? [];
+        $ragQuery = is_string($rag['query'] ?? null) ? trim((string) $rag['query']) : null;
+        $ragQueryOriginal = is_string($rag['query_original'] ?? null) ? trim((string) $rag['query_original']) : null;
+        $ragQueryRewrite = is_array($rag['query_rewrite'] ?? null) ? $rag['query_rewrite'] : null;
+        if ($ragQueryRewrite && !data_get($ragQueryRewrite, 'used')) {
+            $ragQueryRewrite = null;
+        }
 
         foreach ($history as $m) {
             if ($m->content === null) {
@@ -130,6 +136,9 @@ class MessageSendController extends Controller
                 'model' => trim($modelFromSettings ?? (string) config('llm.model')),
                 'archive_search' => $useArchive ?: null,
                 'sources' => !empty($ragSources) ? $ragSources : null,
+                'query' => $useArchive && !empty($ragQuery) ? $ragQuery : null,
+                'query_original' => $useArchive && !empty($ragQueryOriginal) ? $ragQueryOriginal : null,
+                'query_rewrite' => $useArchive && !empty($ragQueryRewrite) ? $ragQueryRewrite : null,
                 'filters' => $useArchive ? $filtersForMetadata : null,
                 'weights' => $useArchive && !empty($weights) ? $weights : null,
                 'filters_auto' => data_get($autoMeta, 'filters.selected') ? true : null,

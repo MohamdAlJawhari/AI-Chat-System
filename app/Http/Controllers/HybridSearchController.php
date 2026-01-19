@@ -4,6 +4,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\ArchiveFilterRouter;
+use App\Services\ArchiveQueryRewriter;
 use App\Services\HybridSearchService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -14,9 +15,15 @@ class HybridSearchController extends Controller
     private const MIN_BATCH_SIZE = 10;
     private const MAX_BATCH_SIZE = 200;
 
-    public function index(Request $r, HybridSearchService $search, ArchiveFilterRouter $router)
+    public function index(Request $r, HybridSearchService $search, ArchiveFilterRouter $router, ArchiveQueryRewriter $rewriter)
     {
         $q = trim($r->get('q', ''));
+        $rewrite = $rewriter->rewrite($q);
+        $searchQuery = trim((string) ($rewrite['query'] ?? ''));
+        if ($searchQuery === '') {
+            $searchQuery = $q;
+        }
+        $rewriteApplied = $q !== '' && $searchQuery !== '' && strcasecmp($q, $searchQuery) !== 0;
 
         // ----- LIMIT / K_DOCS -----
         $rawLimit = $r->input('limit', 10);
@@ -167,7 +174,7 @@ class HybridSearchController extends Controller
         $hasMore = false;
 
         if ($q !== '') {
-            $results = $search->searchDocuments($q, [
+            $results = $search->searchDocuments($searchQuery, [
                 'limit'     => $kDocs,
                 'alpha'     => $alpha,
                 'beta'      => $beta,
@@ -199,6 +206,10 @@ class HybridSearchController extends Controller
 
         return view('search', [
             'q'          => $q,
+            'query_original' => $q,
+            'query_used' => $searchQuery,
+            'query_rewrite' => $rewrite,
+            'query_rewrite_applied' => $rewriteApplied,
             'results'    => $results,
             'limit'      => $limit,
             'pagination' => $pagination,

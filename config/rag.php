@@ -23,6 +23,18 @@ return [
         'http_timeout' => (int) env('RAG_AUTO_ROUTER_TIMEOUT', 12),
         'max_values' => (int) env('RAG_AUTO_ROUTER_MAX_VALUES', 60),
         'max_values_country' => (int) env('RAG_AUTO_ROUTER_MAX_VALUES_COUNTRY', 0),
+        'enabled_filters' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('RAG_AUTO_ROUTER_FILTERS', 'country,category'))
+        ), fn($v) => $v !== '')),
+    ],
+
+    // Optional query rewrite for hybrid search
+    'query_rewrite' => [
+        'enabled' => (bool) env('RAG_QUERY_REWRITE', true),
+        'model' => env('RAG_QUERY_REWRITE_MODEL', ''),
+        'http_timeout' => (int) env('RAG_QUERY_REWRITE_TIMEOUT', 12),
+        'max_chars' => (int) env('RAG_QUERY_REWRITE_MAX_CHARS', 220),
     ],
 
     // Instruction prepended to archive context

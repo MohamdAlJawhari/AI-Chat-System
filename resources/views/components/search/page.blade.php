@@ -6,10 +6,20 @@
     'alpha' => 0.80,
     'beta' => 0.20,
     'filters' => [],
+    'query_original' => null,
+    'query_used' => null,
+    'query_rewrite' => null,
+    'query_rewrite_applied' => false,
 ])
 
 @php
     $hasQuery = filled($q ?? null);
+    $queryOriginal = (string) ($query_original ?? $q ?? '');
+    $queryUsed = (string) ($query_used ?? $queryOriginal);
+    $rewriteApplied = (bool) ($query_rewrite_applied ?? false);
+    if (!$rewriteApplied && $queryOriginal !== '' && $queryUsed !== '') {
+        $rewriteApplied = strcasecmp($queryOriginal, $queryUsed) !== 0;
+    }
     $resultsList = $results ?? [];
     $resultCount = $hasQuery && is_countable($resultsList) ? count($resultsList) : 0;
     $limitValue = (int) ($limit ?? 10);
@@ -272,7 +282,14 @@
         @if($hasQuery)
             <section class="space-y-5">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
-                    <h2 class="text-xl font-semibold sm:text-2xl" style="color: var(--text)">Results for “{{ $q }}”</h2>
+                    <div class="space-y-1">
+                        <h2 class="text-xl font-semibold sm:text-2xl" style="color: var(--text)">Results for “{{ $queryOriginal }}”</h2>
+                        @if($rewriteApplied && $queryUsed !== '')
+                            <div class="text-xs text-muted">
+                                Search query rewritten to: <span class="font-semibold" style="color: var(--text)">{{ $queryUsed }}</span>
+                            </div>
+                        @endif
+                    </div>
                     @if($paginatedMode)
                         <span class="text-sm text-muted">
                             Showing
