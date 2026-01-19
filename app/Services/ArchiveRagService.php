@@ -12,15 +12,25 @@ class ArchiveRagService
     /**
      * Build a context block + metadata for archive-grounded answers.
      *
+     * @param  array<string,mixed>  $filters
+     * @param  array<string,float>  $weights
      * @return array{context:?string,sources:array<int,array<string,mixed>>}
      */
-    public function buildContext(string $query, ?int $limit = null, array $filters = []): array
+    public function buildContext(string $query, ?int $limit = null, array $filters = [], array $weights = []): array
     {
         $limit = $limit ?? (int) config('rag.doc_limit', 15);
-        $results = $this->search->searchDocuments($query, [
+        $options = [
             'limit' => $limit,
             'filters' => $filters,
-        ]);
+        ];
+        if (array_key_exists('alpha', $weights)) {
+            $options['alpha'] = $weights['alpha'];
+        }
+        if (array_key_exists('beta', $weights)) {
+            $options['beta'] = $weights['beta'];
+        }
+
+        $results = $this->search->searchDocuments($query, $options);
 
         if (empty($results)) {
             return ['context' => null, 'sources' => []];

@@ -3,6 +3,7 @@
 // app/Http/Controllers/HybridSearchController.php
 namespace App\Http\Controllers;
 
+use App\Services\ArchiveFilterRouter;
 use App\Services\HybridSearchService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -13,7 +14,7 @@ class HybridSearchController extends Controller
     private const MIN_BATCH_SIZE = 10;
     private const MAX_BATCH_SIZE = 200;
 
-    public function index(Request $r, HybridSearchService $search)
+    public function index(Request $r, HybridSearchService $search, ArchiveFilterRouter $router)
     {
         $q = trim($r->get('q', ''));
 
@@ -51,6 +52,22 @@ class HybridSearchController extends Controller
         // ----- SEARCH PARAMETERS (NEW!) -----
         $alpha = (float) $r->input('alpha', config('rag.alpha', 0.80)); // semantic weight
         $beta = (float) $r->input('beta', config('rag.beta', 0.20));    // doc-level blend
+        $autoFilters = $r->boolean('auto_filters');
+        $autoWeights = $r->boolean('auto_weights');
+        $autoDecision = null;
+        if (($autoFilters || $autoWeights) && $q !== '') {
+            $autoDecision = $router->route($q);
+        }
+
+        if ($autoWeights && is_array($autoDecision)) {
+            $autoWeightsInput = is_array($autoDecision['weights'] ?? null) ? $autoDecision['weights'] : [];
+            $alpha = is_numeric($autoWeightsInput['alpha'] ?? null)
+                ? (float) $autoWeightsInput['alpha']
+                : (float) config('rag.alpha', 0.80);
+            $beta = is_numeric($autoWeightsInput['beta'] ?? null)
+                ? (float) $autoWeightsInput['beta']
+                : (float) config('rag.beta', 0.20);
+        }
         $alpha = min(max($alpha, 0.0), 1.0);
         $beta = min(max($beta, 0.0), 1.0);
 
@@ -58,13 +75,31 @@ class HybridSearchController extends Controller
         $efSearch = (int) $r->input('ef_search', 160); // HNSW parameter
 
         // ----- OPTIONAL FILTERS -----
-        $category = trim((string) $r->input('category', ''));
-        $country = trim((string) $r->input('country', ''));
-        $city = trim((string) $r->input('city', ''));
-        $dateFromRaw = trim((string) $r->input('date_from', ''));
-        $dateToRaw = trim((string) $r->input('date_to', ''));
+        $filtersInput = [
+            'category' => trim((string) $r->input('category', '')),
+            'country' => trim((string) $r->input('country', '')),
+            'city' => trim((string) $r->input('city', '')),
+            'date_from' => trim((string) $r->input('date_from', '')),
+            'date_to' => trim((string) $r->input('date_to', '')),
+            'is_breaking_news' => $r->input('is_breaking_news', ''),
+        ];
 
-        $rawBreaking = $r->input('is_breaking_news', '');
+        if ($autoFilters && is_array($autoDecision)) {
+            $autoFiltersInput = is_array($autoDecision['filters'] ?? null) ? $autoDecision['filters'] : [];
+            foreach ($autoFiltersInput as $key => $value) {
+                if (!array_key_exists($key, $filtersInput) || $filtersInput[$key] === '' || $filtersInput[$key] === null) {
+                    $filtersInput[$key] = $value;
+                }
+            }
+        }
+
+        $category = trim((string) ($filtersInput['category'] ?? ''));
+        $country = trim((string) ($filtersInput['country'] ?? ''));
+        $city = trim((string) ($filtersInput['city'] ?? ''));
+        $dateFromRaw = trim((string) ($filtersInput['date_from'] ?? ''));
+        $dateToRaw = trim((string) ($filtersInput['date_to'] ?? ''));
+
+        $rawBreaking = $filtersInput['is_breaking_news'] ?? '';
         $normalizedBreaking = is_string($rawBreaking) ? strtolower(trim($rawBreaking)) : $rawBreaking;
         $isBreaking = null;
         if ($normalizedBreaking !== '' && $normalizedBreaking !== null) {

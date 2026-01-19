@@ -32,6 +32,8 @@ class MessageSendController extends Controller
             'content' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],
             'archive_search' => ['nullable', 'boolean'],
+            'auto_filters' => ['nullable', 'boolean'],
+            'auto_weights' => ['nullable', 'boolean'],
             'filters' => ['nullable', 'array'],
             'filters.category' => ['nullable', 'string'],
             'filters.country' => ['nullable', 'string'],
@@ -39,6 +41,9 @@ class MessageSendController extends Controller
             'filters.date_from' => ['nullable', 'string'],
             'filters.date_to' => ['nullable', 'string'],
             'filters.is_breaking_news' => ['nullable'],
+            'weights' => ['nullable', 'array'],
+            'weights.alpha' => ['nullable', 'numeric'],
+            'weights.beta' => ['nullable', 'numeric'],
         ]);
 
         $useArchive = $request->boolean('archive_search');
@@ -46,6 +51,8 @@ class MessageSendController extends Controller
         $filters = $this->pipeline->normalizeArchiveFilters($request);
         $searchFilters = $filters['search'];
         $filtersForMetadata = $filters['metadata'];
+        $weights = $filters['weights'] ?? [];
+        $autoMeta = $filters['auto'] ?? [];
 
         $userMetadata = $request->input('metadata', []);
         if (!is_array($userMetadata)) {
@@ -55,6 +62,19 @@ class MessageSendController extends Controller
             $userMetadata['archive_search'] = true;
             if (!empty($filtersForMetadata)) {
                 $userMetadata['archive_filters'] = $filtersForMetadata;
+            }
+            if (!empty($weights)) {
+                $userMetadata['archive_weights'] = $weights;
+            }
+            if (data_get($autoMeta, 'filters.selected')) {
+                $userMetadata['archive_filters_auto'] = true;
+                $userMetadata['archive_filters_reason'] = data_get($autoMeta, 'filters.reason') ?: null;
+                $userMetadata['archive_filters_source'] = data_get($autoMeta, 'filters.source') ?: null;
+            }
+            if (data_get($autoMeta, 'weights.selected')) {
+                $userMetadata['archive_weights_auto'] = true;
+                $userMetadata['archive_weights_reason'] = data_get($autoMeta, 'weights.reason') ?: null;
+                $userMetadata['archive_weights_source'] = data_get($autoMeta, 'weights.source') ?: null;
             }
         }
 
@@ -85,7 +105,7 @@ class MessageSendController extends Controller
             $messages[] = ['role' => 'system', 'content' => $persona['system']];
         }
 
-        $rag = $this->pipeline->attachArchiveContext($useArchive, $incomingContent, $messages, $searchFilters);
+        $rag = $this->pipeline->attachArchiveContext($useArchive, $incomingContent, $messages, $searchFilters, $weights);
         $ragSources = $rag['sources'] ?? [];
 
         foreach ($history as $m) {
@@ -111,6 +131,13 @@ class MessageSendController extends Controller
                 'archive_search' => $useArchive ?: null,
                 'sources' => !empty($ragSources) ? $ragSources : null,
                 'filters' => $useArchive ? $filtersForMetadata : null,
+                'weights' => $useArchive && !empty($weights) ? $weights : null,
+                'filters_auto' => data_get($autoMeta, 'filters.selected') ? true : null,
+                'filters_reason' => data_get($autoMeta, 'filters.reason') ?: null,
+                'filters_source' => data_get($autoMeta, 'filters.source') ?: null,
+                'weights_auto' => data_get($autoMeta, 'weights.selected') ? true : null,
+                'weights_reason' => data_get($autoMeta, 'weights.reason') ?: null,
+                'weights_source' => data_get($autoMeta, 'weights.source') ?: null,
                 'persona' => $persona['name'] ?? null,
                 'persona_requested' => $persona['requested'] ?? null,
                 'persona_reason' => $persona['reason'] ?? null,
@@ -135,4 +162,3 @@ class MessageSendController extends Controller
         ], 201);
     }
 }
-

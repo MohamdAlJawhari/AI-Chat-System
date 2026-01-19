@@ -37,6 +37,8 @@
     $filterDateTo = $filterValues['date_to'] ?? '';
     $filterBreakingRaw = $filterValues['is_breaking_news'] ?? null;
     $filterBreakingValue = is_bool($filterBreakingRaw) ? ($filterBreakingRaw ? '1' : '0') : '';
+    $autoFilters = request()->boolean('auto_filters');
+    $autoWeights = request()->boolean('auto_weights');
     $limitOptions = [
         10 => 'Top 10',
         25 => 'Top 25',
@@ -117,6 +119,17 @@
                                     Pre-search
                                 </span>
                             </div>
+                            <label class="mt-3 flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-muted">
+                                <input
+                                    type="checkbox"
+                                    name="auto_filters"
+                                    value="1"
+                                    class="accent-[var(--accent)]"
+                                    checked
+                                    @if($autoFilters) checked @endif
+                                >
+                                Auto filters (AI picks)
+                            </label>
                             <p class="mt-2 text-xs leading-5 text-muted">Use any combination of filters to cut down the corpus before the hybrid search runs.</p>
                             <div class="mt-4 grid gap-3 sm:grid-cols-2">
                                 <label class="flex flex-col gap-2 text-sm">
@@ -203,6 +216,16 @@
                                     Alpha / Beta
                                 </span>
                             </div>
+                            <label class="mt-3 flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-muted">
+                                <input
+                                    type="checkbox"
+                                    name="auto_weights"
+                                    value="1"
+                                    class="accent-[var(--accent)]"
+                                    @if($autoWeights) checked @endif
+                                >
+                                Auto weights (AI picks)
+                            </label>
                             <p class="mt-2 text-xs leading-5 text-muted">Balance semantic vectors vs. keywords and how much the average chunk score matters.</p>
                             <div class="mt-4 space-y-4">
                                 <label class="block">

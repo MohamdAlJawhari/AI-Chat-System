@@ -17,6 +17,14 @@ return [
     // Cap the amount of article body text sent to the LLM
     'body_character_limit' => (int) env('RAG_BODY_CHAR_LIMIT', 500),
 
+    // Auto filter/weight router settings
+    'auto_router' => [
+        'model' => env('RAG_AUTO_ROUTER_MODEL', ''),
+        'http_timeout' => (int) env('RAG_AUTO_ROUTER_TIMEOUT', 12),
+        'max_values' => (int) env('RAG_AUTO_ROUTER_MAX_VALUES', 60),
+        'max_values_country' => (int) env('RAG_AUTO_ROUTER_MAX_VALUES_COUNTRY', 0),
+    ],
+
     // Instruction prepended to archive context
     'instruction' => env('RAG_INSTRUCTION', <<<TXT
     You are a press assistant. Use the sources inside <<ARCHIVE>> as primary evidence.

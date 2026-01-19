@@ -59,6 +59,103 @@ async function copyTextToClipboard(text) {
   }
 }
 
+function normalizeNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function normalizeBreaking(value) {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'boolean') return value;
+  const normalized = String(value).trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  return null;
+}
+
+function summarizeFilters(filters) {
+  if (!filters || typeof filters !== 'object' || Array.isArray(filters)) return '';
+  const parts = [];
+  const read = (val) => (val === null || val === undefined) ? '' : String(val).trim();
+  const add = (label, val) => {
+    const cleaned = read(val);
+    if (cleaned !== '') parts.push(`${label}=${cleaned}`);
+  };
+  add('category', filters.category);
+  add('country', filters.country);
+  add('city', filters.city);
+
+  const dateFrom = read(filters.date_from);
+  const dateTo = read(filters.date_to);
+  if (dateFrom && dateTo) parts.push(`dates=${dateFrom}..${dateTo}`);
+  else if (dateFrom) parts.push(`from=${dateFrom}`);
+  else if (dateTo) parts.push(`to=${dateTo}`);
+
+  const breaking = normalizeBreaking(filters.is_breaking_news);
+  if (breaking !== null) parts.push(`breaking=${breaking ? 'yes' : 'no'}`);
+
+  return parts.join(', ');
+}
+
+function summarizeWeights(weights) {
+  if (!weights || typeof weights !== 'object' || Array.isArray(weights)) return '';
+  const parts = [];
+  const alpha = normalizeNumber(weights.alpha);
+  const beta = normalizeNumber(weights.beta);
+  if (alpha !== null) parts.push(`alpha=${alpha.toFixed(2)}`);
+  if (beta !== null) parts.push(`beta=${beta.toFixed(2)}`);
+  return parts.join(', ');
+}
+
+function mergeMeta(prev, incoming) {
+  const merged = { ...(prev || {}) };
+  if (!incoming || typeof incoming !== 'object') return merged;
+  const apply = (from, to = from) => {
+    if (Object.prototype.hasOwnProperty.call(incoming, from)) {
+      merged[to] = incoming[from];
+    }
+  };
+  apply('model');
+  apply('archive_search');
+  apply('filters');
+  apply('archive_filters', 'filters');
+  apply('weights');
+  apply('archive_weights', 'weights');
+  apply('filters_auto');
+  apply('archive_filters_auto', 'filters_auto');
+  apply('weights_auto');
+  apply('archive_weights_auto', 'weights_auto');
+  return merged;
+}
+
+function buildMetaLine(meta) {
+  const autoFilters = !!meta.filters_auto;
+  const autoWeights = !!meta.weights_auto;
+  if (!autoFilters && !autoWeights) return '';
+
+  const parts = [];
+  if (meta.model) parts.push(`Model: ${meta.model}`);
+
+  let archiveFlag = null;
+  if (Object.prototype.hasOwnProperty.call(meta, 'archive_search')) {
+    archiveFlag = !!meta.archive_search;
+  } else if (meta.filters || meta.weights || autoFilters || autoWeights) {
+    archiveFlag = true;
+  }
+  if (archiveFlag !== null) parts.push(`Archive: ${archiveFlag ? 'On' : 'Off'}`);
+
+  const filtersSummary = summarizeFilters(meta.filters);
+  parts.push(`Filters: ${filtersSummary || 'none'}`);
+
+  if (autoWeights) {
+    const weightsSummary = summarizeWeights(meta.weights);
+    if (weightsSummary) parts.push(`Weights: ${weightsSummary}`);
+  }
+
+  return parts.join(' | ');
+}
+
 /**
  * Create a message bubble.
  * @param {'user'|'assistant'} role
@@ -93,6 +190,14 @@ export function messageBubble(role, content, metadata = null, opts = {}) {
     archiveBadge.textContent = 'Archive Query';
     archiveBadge.style.color = 'rgba(255,255,255,0.75)';
     bubble.appendChild(archiveBadge);
+  }
+
+  let metaLine = null;
+  if (role === 'assistant') {
+    metaLine = el('div', 'mt-1 text-[11px] tracking-wide');
+    metaLine.style.color = 'rgba(148,163,184,0.85)';
+    metaLine.classList.add('hidden');
+    bubble.appendChild(metaLine);
   }
 
   bubble.appendChild(contentEl);
@@ -143,6 +248,23 @@ export function messageBubble(role, content, metadata = null, opts = {}) {
 
   wrap.appendChild(bubble);
   wrap._contentEl = contentEl; wrap._raw = content ?? '';
+  if (metaLine) {
+    let metaState = {};
+    const applyMeta = (incoming) => {
+      metaState = mergeMeta(metaState, incoming);
+      wrap._meta = metaState;
+      const line = buildMetaLine(metaState);
+      if (line) {
+        metaLine.textContent = line;
+        metaLine.classList.remove('hidden');
+      } else {
+        metaLine.textContent = '';
+        metaLine.classList.add('hidden');
+      }
+    };
+    wrap._setMeta = applyMeta;
+    if (metadata) applyMeta(metadata);
+  }
   try { wrap._chatId = state.currentChatId; } catch (_) { }
   // expose bubble for stream logic (to style pending vs rendered)
   wrap._bubble = bubble;

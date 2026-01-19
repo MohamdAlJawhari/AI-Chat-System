@@ -211,6 +211,10 @@
                             Pre-search
                         </span>
                     </div>
+                    <label class="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted">
+                        <input type="checkbox" name="auto_filters" value="1" class="accent-[var(--accent)]" checked>
+                        Auto filters (AI picks)
+                    </label>
 
                     <div class="grid gap-3 sm:grid-cols-2">
                         <label class="flex flex-col gap-1 text-sm">
@@ -266,6 +270,10 @@
                             Alpha / Beta
                         </span>
                     </div>
+                    <label class="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted">
+                        <input type="checkbox" name="auto_weights" value="1" class="accent-[var(--accent)]">
+                        Auto weights (AI picks)
+                    </label>
                     
                     <div class="rounded-xl border px-4 py-3 space-y-3" style="border-color: rgba(255,255,255,0.08); background: rgba(7, 12, 24, 0.55);">
                         <details class="advanced-list" closed>

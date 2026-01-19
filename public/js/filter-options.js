@@ -1,5 +1,5 @@
 (() => {
-  const CACHE_KEY = 'uchat:filter-options:v1';
+  const CACHE_KEY = 'uchat:filter-options:v2';
   const TTL_MS = 1000 * 60 * 60 * 12; // 12 hours
   const ENDPOINT = '/api/filter-options';
 
@@ -45,6 +45,18 @@
     fill(datalists.category, categories);
     fill(datalists.country, countries);
     fill(datalists.city, cities);
+  }
+
+  function applyDateRange(range) {
+    if (!range) return;
+    const min = (range.min || '').toString().trim();
+    const max = (range.max || '').toString().trim();
+    if (!min && !max) return;
+
+    document.querySelectorAll('input[type="date"][name="date_from"], input[type="date"][name="date_to"]').forEach((input) => {
+      if (min) input.setAttribute('min', min);
+      if (max) input.setAttribute('max', max);
+    });
   }
 
   function readCache() {
@@ -93,6 +105,7 @@
     try {
       const options = await fetchOptions();
       populateLists(options);
+      applyDateRange(options?.date_range);
     } catch (e) {
       console.error('Failed to load filter options', e);
     }

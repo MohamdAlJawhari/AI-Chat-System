@@ -13,13 +13,49 @@ class MessagePipeline
     /**
      * Normalize archive filters from the request for use in hybrid search and metadata.
      *
-     * @return array{search: array<string, mixed>, metadata: array<string, mixed>}
+     * @return array{search: array<string, mixed>, metadata: array<string, mixed>, weights: array<string, float>, auto: array<string, mixed>}
      */
     public function normalizeArchiveFilters(Request $request): array
     {
         $filtersInput = $request->input('filters', []);
         if (!is_array($filtersInput)) {
             $filtersInput = [];
+        }
+
+        $autoFilters = $request->boolean('auto_filters');
+        $autoWeights = $request->boolean('auto_weights');
+        if (!$request->boolean('archive_search')) {
+            $autoFilters = false;
+            $autoWeights = false;
+        }
+        $autoDecision = null;
+
+        if ($autoFilters || $autoWeights) {
+            $incomingContent = trim((string) $request->input('content', ''));
+            if ($incomingContent !== '') {
+                $autoDecision = app(ArchiveFilterRouter::class)->route($incomingContent);
+            }
+        }
+
+        $autoMeta = [
+            'filters' => null,
+            'weights' => null,
+        ];
+
+        if ($autoFilters && is_array($autoDecision)) {
+            $autoMeta['filters'] = [
+                'selected' => true,
+                'reason' => $autoDecision['reason'] ?? null,
+                'source' => $autoDecision['source'] ?? null,
+            ];
+            $autoFiltersInput = is_array($autoDecision['filters'] ?? null) ? $autoDecision['filters'] : [];
+            $filtersInput = $this->mergeAutoFilters($filtersInput, $autoFiltersInput);
+        } elseif ($autoFilters) {
+            $autoMeta['filters'] = [
+                'selected' => true,
+                'reason' => 'Auto router skipped: empty query',
+                'source' => 'auto-fallback',
+            ];
         }
 
         $category = trim((string) ($filtersInput['category'] ?? ''));
@@ -88,9 +124,41 @@ class MessagePipeline
             'is_breaking_news' => $isBreaking,
         ];
 
+        $defaultAlpha = (float) config('rag.alpha', 0.80);
+        $defaultBeta = (float) config('rag.beta', 0.20);
+        $weightsInput = $request->input('weights', []);
+        if (!is_array($weightsInput)) {
+            $weightsInput = [];
+        }
+
+        if ($autoWeights && is_array($autoDecision)) {
+            $autoMeta['weights'] = [
+                'selected' => true,
+                'reason' => $autoDecision['reason'] ?? null,
+                'source' => $autoDecision['source'] ?? null,
+            ];
+            $weights = $this->normalizeWeights(
+                is_array($autoDecision['weights'] ?? null) ? $autoDecision['weights'] : [],
+                $defaultAlpha,
+                $defaultBeta,
+                true
+            );
+        } elseif ($autoWeights) {
+            $autoMeta['weights'] = [
+                'selected' => true,
+                'reason' => 'Auto router skipped: empty query',
+                'source' => 'auto-fallback',
+            ];
+            $weights = $this->normalizeWeights([], $defaultAlpha, $defaultBeta, true);
+        } else {
+            $weights = $this->normalizeWeights($weightsInput, $defaultAlpha, $defaultBeta, false);
+        }
+
         return [
             'search' => $searchFilters,
             'metadata' => array_filter($metadataFilters, fn($v) => $v !== null),
+            'weights' => $weights,
+            'auto' => $autoMeta,
         ];
     }
 
@@ -98,9 +166,11 @@ class MessagePipeline
      * Optionally run archive retrieval augmented generation and inject context.
      *
      * @param  array<int, array<string, string>>  $messages
+     * @param  array<string,mixed>  $filters
+     * @param  array<string,float>  $weights
      * @return array{context:?string,sources:array<int,array<string,mixed>>}
      */
-    public function attachArchiveContext(bool $enabled, ?string $query, array &$messages, array $filters = []): array
+    public function attachArchiveContext(bool $enabled, ?string $query, array &$messages, array $filters = [], array $weights = []): array
     {
         if (!$enabled) {
             return ['context' => null, 'sources' => []];
@@ -111,7 +181,7 @@ class MessagePipeline
             return ['context' => null, 'sources' => []];
         }
 
-        $rag = app(ArchiveRagService::class)->buildContext($query, null, $filters);
+        $rag = app(ArchiveRagService::class)->buildContext($query, null, $filters, $weights);
         if (!empty($rag['context'])) {
             $archiveMsg = ['role' => 'system', 'content' => $rag['context']];
 
@@ -123,6 +193,65 @@ class MessagePipeline
         }
 
         return $rag;
+    }
+
+    private function mergeAutoFilters(array $filtersInput, array $autoFilters): array
+    {
+        $cleanInput = [];
+        foreach ($filtersInput as $key => $value) {
+            if ($value === '' || $value === null) {
+                continue;
+            }
+            $cleanInput[$key] = $value;
+        }
+
+        return array_merge($autoFilters, $cleanInput);
+    }
+
+    /**
+     * @return array<string,float>
+     */
+    private function normalizeWeights(array $weightsInput, float $defaultAlpha, float $defaultBeta, bool $alwaysReturn): array
+    {
+        $alphaRaw = $this->normalizeWeightValue($weightsInput['alpha'] ?? null);
+        $betaRaw = $this->normalizeWeightValue($weightsInput['beta'] ?? null);
+
+        $alpha = $alwaysReturn ? ($alphaRaw ?? $defaultAlpha) : $alphaRaw;
+        $beta = $alwaysReturn ? ($betaRaw ?? $defaultBeta) : $betaRaw;
+
+        if (!$alwaysReturn) {
+            if ($alpha !== null && abs($alpha - $defaultAlpha) < 0.0001) {
+                $alpha = null;
+            }
+            if ($beta !== null && abs($beta - $defaultBeta) < 0.0001) {
+                $beta = null;
+            }
+        }
+
+        $weights = [];
+        if ($alpha !== null) {
+            $weights['alpha'] = $alpha;
+        }
+        if ($beta !== null) {
+            $weights['beta'] = $beta;
+        }
+
+        return $weights;
+    }
+
+    private function normalizeWeightValue(mixed $value): ?float
+    {
+        if (!is_numeric($value)) {
+            return null;
+        }
+        $num = (float) $value;
+        if ($num < 0.0) {
+            return 0.0;
+        }
+        if ($num > 1.0) {
+            return 1.0;
+        }
+        return $num;
     }
 
     /**

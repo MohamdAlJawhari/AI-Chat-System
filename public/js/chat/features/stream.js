@@ -3,8 +3,14 @@ import { renderSafeMarkdown, styleRichContent } from '../ui/markdown.js';
 import { applyDirection } from '../core/rtl.js';
 import { messageBubble } from '../ui/ui.js';
 
+const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+
+function getControlPanel(){
+  return document.querySelector('.chat-control-panel');
+}
+
 function collectArchiveFilters(){
-  const panel = document.querySelector('.chat-control-panel');
+  const panel = getControlPanel();
   if (!panel) return {};
   const grab = (name) => {
     const input = panel.querySelector(`[name="${name}"]`);
@@ -27,6 +33,31 @@ function collectArchiveFilters(){
   return cleaned;
 }
 
+function collectArchiveWeights(){
+  const panel = getControlPanel();
+  if (!panel) return {};
+  const grab = (name) => {
+    const input = panel.querySelector(`[name="${name}"]`);
+    if (!input) return null;
+    const value = (input.value ?? '').toString().trim();
+    if (value === '') return null;
+    return value;
+  };
+  const alpha = grab('alpha');
+  const beta = grab('beta');
+  const weights = {};
+  if (alpha !== null) weights.alpha = alpha;
+  if (beta !== null) weights.beta = beta;
+  return weights;
+}
+
+function readAutoFlag(name){
+  const panel = getControlPanel();
+  if (!panel) return false;
+  const input = panel.querySelector(`[name="${name}"]`);
+  return !!(input && input.checked);
+}
+
 export async function sendMessage(state, { createChatIfNeeded, loadMessages, loadChats }){
   const { messagesEl, composer, sendBtn } = elements;
   const text = composer.value.trim();
@@ -34,6 +65,9 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
   await createChatIfNeeded();
   const usingArchive = !!state.archiveEnabled;
   const archiveFilters = usingArchive ? collectArchiveFilters() : {};
+  const archiveWeights = usingArchive ? collectArchiveWeights() : {};
+  const autoFilters = usingArchive ? readAutoFlag('auto_filters') : false;
+  const autoWeights = usingArchive ? readAutoFlag('auto_weights') : false;
 
   const cur = (state.chatsCache || []).find(c=>c.id===state.currentChatId);
   const chatTitle = cur?.title || 'Untitled';
@@ -109,6 +143,15 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
     if (usingArchive && Object.keys(archiveFilters).length) {
       payload.filters = archiveFilters;
     }
+    if (usingArchive && Object.keys(archiveWeights).length && !autoWeights) {
+      payload.weights = archiveWeights;
+    }
+    if (usingArchive && autoFilters) {
+      payload.auto_filters = true;
+    }
+    if (usingArchive && autoWeights) {
+      payload.auto_weights = true;
+    }
     const r = await fetch('/api/messages/stream', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin', body: JSON.stringify(payload) });
     if (!r.ok || !r.body) throw new Error(await r.text());
 
@@ -158,6 +201,16 @@ export async function sendMessage(state, { createChatIfNeeded, loadMessages, loa
             if (typeof assistant._setArchiveBadge === 'function') {
               assistant._setArchiveBadge(assistant._archiveEnabled);
             }
+          }
+          const metaPatch = {};
+          if (hasOwn(evt, 'model')) metaPatch.model = evt.model;
+          if (hasOwn(evt, 'archive_search')) metaPatch.archive_search = evt.archive_search;
+          if (hasOwn(evt, 'filters')) metaPatch.filters = evt.filters;
+          if (hasOwn(evt, 'weights')) metaPatch.weights = evt.weights;
+          if (hasOwn(evt, 'filters_auto')) metaPatch.filters_auto = evt.filters_auto;
+          if (hasOwn(evt, 'weights_auto')) metaPatch.weights_auto = evt.weights_auto;
+          if (Object.keys(metaPatch).length && typeof assistant._setMeta === 'function') {
+            assistant._setMeta(metaPatch);
           }
           if (evt.persona) {
             const resolvedLabel = evt.persona.replace(/_/g,' ');

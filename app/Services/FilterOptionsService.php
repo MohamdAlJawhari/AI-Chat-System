@@ -2,18 +2,19 @@
 
 namespace App\Services;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class FilterOptionsService
 {
-    private const CACHE_KEY = 'filter_options:v1';
+    private const CACHE_KEY = 'filter_options:v2';
 
     /**
      * Return distinct category/country/city values from the news table,
      * cached to avoid hitting the database on every request.
      *
-     * @return array{categories:array<int,string>,countries:array<int,string>,cities:array<int,string>}
+     * @return array{categories:array<int,string>,countries:array<int,string>,cities:array<int,string>,date_range:array{min:?string,max:?string}}
      */
     public function get(): array
     {
@@ -25,6 +26,7 @@ class FilterOptionsService
                 'categories' => $this->distinctValues('category'),
                 'countries'  => $this->distinctValues('country'),
                 'cities'     => $this->distinctValues('city'),
+                'date_range' => $this->dateRange(),
             ];
         });
     }
@@ -62,5 +64,39 @@ class FilterOptionsService
             ->all();
 
         return $values;
+    }
+
+    /**
+     * Return the earliest/latest available date_sent values (YYYY-MM-DD).
+     *
+     * @return array{min:?string,max:?string}
+     */
+    private function dateRange(): array
+    {
+        $row = DB::table('news')
+            ->selectRaw('MIN(date_sent) as min_date, MAX(date_sent) as max_date')
+            ->whereNotNull('date_sent')
+            ->first();
+
+        $min = $this->formatDate($row->min_date ?? null);
+        $max = $this->formatDate($row->max_date ?? null);
+
+        return [
+            'min' => $min,
+            'max' => $max,
+        ];
+    }
+
+    private function formatDate(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        try {
+            return CarbonImmutable::parse($value)->toDateString();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }

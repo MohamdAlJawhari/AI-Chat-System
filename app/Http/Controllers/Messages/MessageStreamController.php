@@ -33,6 +33,8 @@ class MessageStreamController extends Controller
             'role' => ['required', 'string', Rule::in(['user'])],
             'content' => ['required', 'string'],
             'archive_search' => ['nullable', 'boolean'],
+            'auto_filters' => ['nullable', 'boolean'],
+            'auto_weights' => ['nullable', 'boolean'],
             'filters' => ['nullable', 'array'],
             'filters.category' => ['nullable', 'string'],
             'filters.country' => ['nullable', 'string'],
@@ -40,6 +42,9 @@ class MessageStreamController extends Controller
             'filters.date_from' => ['nullable', 'string'],
             'filters.date_to' => ['nullable', 'string'],
             'filters.is_breaking_news' => ['nullable'],
+            'weights' => ['nullable', 'array'],
+            'weights.alpha' => ['nullable', 'numeric'],
+            'weights.beta' => ['nullable', 'numeric'],
         ]);
 
         $useArchive = $request->boolean('archive_search');
@@ -47,6 +52,8 @@ class MessageStreamController extends Controller
         $filters = $this->pipeline->normalizeArchiveFilters($request);
         $searchFilters = $filters['search'];
         $filtersForMetadata = $filters['metadata'];
+        $weights = $filters['weights'] ?? [];
+        $autoMeta = $filters['auto'] ?? [];
 
         // Save user message
         $userMsg = Message::create([
@@ -59,6 +66,13 @@ class MessageStreamController extends Controller
                 ? array_filter([
                     'archive_search' => true,
                     'archive_filters' => $filtersForMetadata,
+                    'archive_weights' => !empty($weights) ? $weights : null,
+                    'archive_filters_auto' => data_get($autoMeta, 'filters.selected') ? true : null,
+                    'archive_weights_auto' => data_get($autoMeta, 'weights.selected') ? true : null,
+                    'archive_filters_reason' => data_get($autoMeta, 'filters.reason') ?: null,
+                    'archive_filters_source' => data_get($autoMeta, 'filters.source') ?: null,
+                    'archive_weights_reason' => data_get($autoMeta, 'weights.reason') ?: null,
+                    'archive_weights_source' => data_get($autoMeta, 'weights.source') ?: null,
                 ], fn($v) => $v !== null && $v !== [])
                 : null,
         ]);
@@ -73,7 +87,7 @@ class MessageStreamController extends Controller
             $messages[] = ['role' => 'system', 'content' => $persona['system']];
         }
 
-        $rag = $this->pipeline->attachArchiveContext($useArchive, $incomingContent, $messages, $searchFilters);
+        $rag = $this->pipeline->attachArchiveContext($useArchive, $incomingContent, $messages, $searchFilters, $weights);
         $ragSources = $rag['sources'] ?? [];
 
         foreach ($history as $m) {
@@ -110,17 +124,18 @@ class MessageStreamController extends Controller
 
         $assistantId = (string) \Illuminate\Support\Str::uuid();
 
-        return response()->stream(function () use ($httpRes, $chat, $assistantId, $model, $ragSources, $useArchive, $filtersForMetadata, $persona) {
+        return response()->stream(function () use ($httpRes, $chat, $assistantId, $model, $ragSources, $useArchive, $filtersForMetadata, $weights, $autoMeta, $persona) {
             @ignore_user_abort(true);
             @set_time_limit(0); // avoid PHP max_execution_time cutting long streams
             $body = $httpRes->toPsrResponse()->getBody();
             $buffer = '';
             $assistantText = '';
             $modelUsed = $model;
+            $lastModelSent = $modelUsed;
             $assistantCreated = false;
             $lastPersistLen = 0;
 
-            $buildAssistantMetadata = function (string $modelName) use ($useArchive, $ragSources, $filtersForMetadata, $persona): array {
+            $buildAssistantMetadata = function (string $modelName) use ($useArchive, $ragSources, $filtersForMetadata, $weights, $autoMeta, $persona): array {
                 $meta = [
                     'model' => $modelName,
                     'persona' => $persona['name'] ?? null,
@@ -137,6 +152,19 @@ class MessageStreamController extends Controller
                     if (!empty($filtersForMetadata)) {
                         $meta['filters'] = $filtersForMetadata;
                     }
+                    if (!empty($weights)) {
+                        $meta['weights'] = $weights;
+                    }
+                    if (data_get($autoMeta, 'filters.selected')) {
+                        $meta['filters_auto'] = true;
+                        $meta['filters_reason'] = data_get($autoMeta, 'filters.reason') ?: null;
+                        $meta['filters_source'] = data_get($autoMeta, 'filters.source') ?: null;
+                    }
+                    if (data_get($autoMeta, 'weights.selected')) {
+                        $meta['weights_auto'] = true;
+                        $meta['weights_reason'] = data_get($autoMeta, 'weights.reason') ?: null;
+                        $meta['weights_source'] = data_get($autoMeta, 'weights.source') ?: null;
+                    }
                 }
                 return array_filter($meta, fn($v) => $v !== null && $v !== []);
             };
@@ -147,11 +175,18 @@ class MessageStreamController extends Controller
                 @flush();
             };
 
-            if ($useArchive) {
-                $send([
-                    'archive_search' => true,
-                    'rag_sources' => $ragSources,
-                ]);
+            $initialMeta = [
+                'model' => $modelUsed,
+                'archive_search' => $useArchive ? true : null,
+                'rag_sources' => $ragSources,
+                'filters' => !empty($filtersForMetadata) ? $filtersForMetadata : null,
+                'weights' => !empty($weights) ? $weights : null,
+                'filters_auto' => data_get($autoMeta, 'filters.selected') ? true : null,
+                'weights_auto' => data_get($autoMeta, 'weights.selected') ? true : null,
+            ];
+            $initialMeta = array_filter($initialMeta, fn($v) => $v !== null && $v !== []);
+            if (!empty($initialMeta)) {
+                $send($initialMeta);
             }
             $send(array_filter([
                 'persona' => $persona['name'] ?? null,
@@ -207,6 +242,10 @@ class MessageStreamController extends Controller
                     }
                     if (data_get($evt, 'model')) {
                         $modelUsed = (string) data_get($evt, 'model');
+                        if ($modelUsed !== $lastModelSent) {
+                            $send(['model' => $modelUsed]);
+                            $lastModelSent = $modelUsed;
+                        }
                     }
                     if (data_get($evt, 'done') === true) {
                         $send(['done' => true]);
