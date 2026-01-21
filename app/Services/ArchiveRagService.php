@@ -51,7 +51,7 @@ class ArchiveRagService
             "You are a press assistant. Use ONLY the sources inside <<ARCHIVE>>.",
             "Do NOT invent facts, numbers, dates, names, or events not explicitly in sources.",
             "When you use a claim, cite it like [1] or [2].",
-            "If the sources are insufficient, say: 'المصادر في الأرشيف غير كافية للإجابة بدقة.'",
+            "If the sources are insufficient, say: 'المصادر في الأرشيف غير كافية للإجابة بدقة.' But give answer if possible.",
             "Write a concise answer first, then (optional) a short timeline or bullets if asked.",
         ]);
         $bodyLimit = max(200, (int) config('rag.body_character_limit', 500));

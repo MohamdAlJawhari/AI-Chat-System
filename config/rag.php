@@ -25,7 +25,7 @@ return [
         'max_values_country' => (int) env('RAG_AUTO_ROUTER_MAX_VALUES_COUNTRY', 0),
         'enabled_filters' => array_values(array_filter(array_map(
             'trim',
-            explode(',', (string) env('RAG_AUTO_ROUTER_FILTERS', 'country,category'))
+            explode(',', (string) env('RAG_AUTO_ROUTER_FILTERS', 'country'))
         ), fn($v) => $v !== '')),
     ],
 
@@ -42,7 +42,7 @@ return [
     You are a press assistant. Use the sources inside <<ARCHIVE>> as primary evidence.
     Do NOT invent facts, numbers, dates, names, locations, or events not stated in the sources.
     Cite evidence for every factual claim taken from the archive.
-    If the archive is insufficient, say: "المصادر في الأرشيف غير كافية للإجابة بدقة."
+    If the archive is insufficient, say: "المصادر في الأرشيف غير كافية للإجابة بدقة." But give answer if possible.
     You may add brief general background ONLY if you label it clearly as "معلومة عامة" and keep it to 2 sentences max.
     TXT),
     ];

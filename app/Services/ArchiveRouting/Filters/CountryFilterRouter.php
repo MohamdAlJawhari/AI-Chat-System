@@ -25,7 +25,8 @@ class CountryFilterRouter
             $max = $countryMax;
         }
 
-        $allowedList = $this->formatter->formatAllowed($allowedValues, $max);
+        $preferredValues = $this->preferArabicValues($allowedValues);
+        $allowedList = $this->formatter->formatAllowed($preferredValues, $max);
         $prompt = $this->buildPrompt($content, $allowedList);
         $parsed = $this->client->call($prompt, $model, $options);
 
@@ -48,6 +49,7 @@ class CountryFilterRouter
         - إذا لم يوجد تطابق واضح، أعد القيمة null.
         - ممنوع اختراع أو تخمين أي قيمة غير موجودة في القائمة.
         - فلتر الدولة هو الأعلى أولوية: إذا وُجد أي تلميح جغرافي، اختر الدولة الأنسب.
+        - إذا كانت هناك قيم عربية وإنجليزية لنفس الدولة، اختر القيمة العربية.
 
         قائمة الدول المسموح بها:
         {$allowedList}
@@ -72,5 +74,22 @@ class CountryFilterRouter
         }
 
         return trim((string) $raw);
+    }
+
+    /**
+     * @param  array<int,string>  $values
+     * @return array<int,string>
+     */
+    private function preferArabicValues(array $values): array
+    {
+        $arabic = [];
+        foreach ($values as $value) {
+            $value = trim((string) $value);
+            if ($value !== '' && preg_match('/\p{Arabic}/u', $value) === 1) {
+                $arabic[] = $value;
+            }
+        }
+
+        return !empty($arabic) ? $arabic : $values;
     }
 }

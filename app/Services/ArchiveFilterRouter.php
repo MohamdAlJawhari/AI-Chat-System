@@ -309,11 +309,19 @@ class ArchiveFilterRouter
 
         return $best;
     }
-
+    // to normalize tokens for matching (e.g., country names)
     private function normalizeToken(string $value): string
     {
-        $value = strtolower($value);
-        $value = preg_replace('/[^a-z0-9]+/', '', $value) ?? '';
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+        if (function_exists('mb_strtolower')) {
+            $value = mb_strtolower($value, 'UTF-8');
+        } else {
+            $value = strtolower($value);
+        }
+        $value = preg_replace('/[^\p{L}\p{N}]+/u', '', $value) ?? '';
         return $value;
     }
 

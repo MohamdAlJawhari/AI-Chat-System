@@ -101,20 +101,22 @@ class ArchiveQueryRewriter
     private function buildPrompt(string $content, int $maxChars): string
     {
         return <<<PROMPT
-You rewrite user requests into concise search queries for a newsroom archive hybrid search.
-Return ONLY valid JSON:
-{"query": string}
+            Rewrite the input into a short Arabic news search query.
 
-Rules:
-- Preserve names, locations, organizations, dates, and key nouns.
-- Remove filler, greetings, and instructions.
-- Keep the same language as the user.
-- Limit to {$maxChars} characters.
-- If the input is already a good query, return it unchanged.
+            Return ONLY valid JSON:
+            {"query": string}
 
-User request:
-{$content}
-PROMPT;
+            Rules:
+            - Same language as input.
+            - Convert questions into neutral news topics.
+            - Keep locations, actors, dates, and event types.
+            - Remove instructions and meta phrases (مثل: اكتب، تكلم، من الأرشيف).
+            - Topic-style, not a sentence.
+            - Max {$maxChars} characters.
+
+            Input:
+            {$content}
+            PROMPT;
     }
 
     /**

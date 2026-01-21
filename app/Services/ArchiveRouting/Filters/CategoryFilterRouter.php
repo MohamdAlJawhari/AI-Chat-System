@@ -20,7 +20,8 @@ class CategoryFilterRouter
     public function route(string $content, array $allowedValues, string $model, array $options): array
     {
         $max = (int) config('rag.auto_router.max_values', 60);
-        $allowedList = $this->formatter->formatAllowed($allowedValues, $max);
+        $preferredValues = $this->preferArabicValues($allowedValues);
+        $allowedList = $this->formatter->formatAllowed($preferredValues, $max);
         $prompt = $this->buildPrompt($content, $allowedList);
         $parsed = $this->client->call($prompt, $model, $options);
 
@@ -42,6 +43,7 @@ class CategoryFilterRouter
         - اختر قيمة واحدة كحد أقصى من القائمة المسموح بها.
         - إذا لم يوجد تطابق واضح، أعد القيمة null.
         - ممنوع اختراع أو تخمين أي قيمة غير موجودة في القائمة.
+        - إذا كانت هناك قيم عربية وإنجليزية لنفس التصنيف، اختر القيمة العربية.
 
         قائمة التصنيفات المسموح بها:
         {$allowedList}
@@ -66,5 +68,22 @@ class CategoryFilterRouter
         }
 
         return trim((string) $raw);
+    }
+
+    /**
+     * @param  array<int,string>  $values
+     * @return array<int,string>
+     */
+    private function preferArabicValues(array $values): array
+    {
+        $arabic = [];
+        foreach ($values as $value) {
+            $value = trim((string) $value);
+            if ($value !== '' && preg_match('/\p{Arabic}/u', $value) === 1) {
+                $arabic[] = $value;
+            }
+        }
+
+        return !empty($arabic) ? $arabic : $values;
     }
 }
