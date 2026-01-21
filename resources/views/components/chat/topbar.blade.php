@@ -180,17 +180,31 @@
     ];
 @endphp
 
-<header class="relative z-40 p-3 border-b backdrop-blur flex items-center justify-between gap-3"
+<header class="relative z-40 p-3 border-b backdrop-blur flex items-center gap-3"
     style="border-color: var(--border-muted); background: var(--surface)">
-    <div class="flex items-center gap-2">
-        <button id="sidebarToggle" class="rounded-md px-2 py-1 hover:brightness-110"
-            style="background: var(--surface); color: var(--text); border: 1px solid var(--border-muted);"
-            title="Toggle sidebar">
-            <i id="sidebarIcon" class="fa-solid fa-chevron-left"></i>
-        </button>
+    <div class="flex-1 flex items-center min-w-0">
+        <div class="chat-top-controls">
+            <button id="sidebarToggle" class="rounded-md px-2 py-1 hover:brightness-110"
+                style="background: var(--surface); color: var(--text); border: 1px solid var(--border-muted);"
+                title="Toggle sidebar">
+                <i id="sidebarIcon" class="fa-solid fa-chevron-left"></i>
+            </button>
+            <div class="flex items-center gap-2">
+                <label class="text-sm" style="color: color-mix(in srgb, var(--text) 70%, transparent)">Persona</label>
+                <select id="personaSelect" data-default-persona="{{ $defaultPersona }}"
+                    class="rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                    style="background: var(--surface); border: 1px solid var(--border-muted); color: var(--text);">
+                    @foreach($personaOptions as $persona)
+                        <option value="{{ $persona }}" @if($persona === $defaultPersona) selected @endif>
+                            {{ $personaLabels[$persona] ?? ucfirst(str_replace('_', ' ', $persona)) }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
     </div>
 
-    <div class="flex-1 flex justify-center">
+    <div class="flex items-center justify-center">
         <form method="get" action="{{ route('search') }}" class="hidden xl:flex items-center gap-4 relative">
             <a href="/search"
             class="chat-search-button rounded-full px-4 py-2 flex items-center gap-2 text-sm font-medium hover:brightness-110 transition pointer-events-auto"
@@ -211,20 +225,8 @@
         </a>
     </div>
 
-    <div class="chat-top-controls">
-        <div class="flex items-center gap-3">
-            <div class="flex items-center gap-2">
-                <label class="text-sm" style="color: color-mix(in srgb, var(--text) 70%, transparent)">Persona</label>
-                <select id="personaSelect" data-default-persona="{{ $defaultPersona }}"
-                    class="rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                    style="background: var(--surface); border: 1px solid var(--border-muted); color: var(--text);">
-                    @foreach($personaOptions as $persona)
-                        <option value="{{ $persona }}" @if($persona === $defaultPersona) selected @endif>
-                            {{ $personaLabels[$persona] ?? ucfirst(str_replace('_', ' ', $persona)) }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+    <div class="flex-1 flex items-center justify-end min-w-0">
+        <div class="chat-top-controls">
             <label class="text-sm" style="color: color-mix(in srgb, var(--text) 70%, transparent)">Model</label>
             <select id="modelSelect"
                 class="rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[var(--accent)]"
