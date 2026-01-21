@@ -188,11 +188,6 @@
             title="Toggle sidebar">
             <i id="sidebarIcon" class="fa-solid fa-chevron-left"></i>
         </button>
-        <button id="archiveDrawerToggle" class="rounded-md px-2 py-1 hover:brightness-110"
-            style="background: var(--surface); color: var(--text); border: 1px solid var(--border-muted);"
-            title="Toggle archive drawer">
-            <i id="archiveDrawerIcon" class="fa-solid fa-chevron-right"></i>
-        </button>
     </div>
 
     <div class="flex-1 flex justify-center">
@@ -249,6 +244,11 @@
                     class="hidden absolute right-0 mt-2 w-56 rounded-md border backdrop-blur shadow-lg py-1 text-sm z-50"
                     style="border-color: var(--border-muted); background: var(--bg);"></div>
             </div>
+            <button id="archiveDrawerToggle" class="rounded-md px-2 py-1 hover:brightness-110"
+                style="background: var(--surface); color: var(--text); border: 1px solid var(--border-muted);"
+                title="Toggle archive drawer">
+                <i id="archiveDrawerIcon" class="fa-solid fa-chevron-right"></i>
+            </button>
         </div>
     </div>
 </header>
