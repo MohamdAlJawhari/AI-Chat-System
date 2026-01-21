@@ -1,6 +1,7 @@
 import { elements } from './core/dom.js';
 import { state } from './core/state.js';
 import { initSidebar } from './features/sidebar.js';
+import { initArchiveDrawer } from './features/archiveDrawer.js';
 import { apiGet, apiPost, apiPatch, apiDelete } from './api/api.js';
 import { messageBubble, chatItem } from './ui/ui.js';
 import { renderEmptyState } from './ui/emptyState.js';
@@ -140,7 +141,7 @@ async function createChatIfNeeded(){
 
 /** Main boot function that wires up everything. */
 async function bootstrap(){
-  initTheme(); initSidebar(state); initComposer(); initUserMenu(); initArchiveSwitch();
+  initTheme(); initSidebar(state); initArchiveDrawer(state); initComposer(); initUserMenu(); initArchiveSwitch();
   // Auth status (session-based)
   /** Update the small status label in the sidebar. */
   function updateAuthStatus(){

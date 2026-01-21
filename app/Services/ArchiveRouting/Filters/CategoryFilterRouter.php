@@ -33,19 +33,22 @@ class CategoryFilterRouter
     private function buildPrompt(string $content, string $allowedList): string
     {
         return <<<PROMPT
-You select the best Category filter for a newsroom archive search.
-Return ONLY valid JSON:
-{"value": string|null}
+        أنت مسؤول عن اختيار أفضل فلتر "التصنيف" لعملية البحث داخل أرشيف غرفة الأخبار.
 
-Rules:
-- Choose at most one value from the allowed list; if no match, return null.
-- Do NOT invent values.
+        أعد النتيجة بصيغة JSON صحيحة فقط:
+        {"value": string|null}
 
-Allowed Category values: {$allowedList}
+        القواعد:
+        - اختر قيمة واحدة كحد أقصى من القائمة المسموح بها.
+        - إذا لم يوجد تطابق واضح، أعد القيمة null.
+        - ممنوع اختراع أو تخمين أي قيمة غير موجودة في القائمة.
 
-User query:
-{$content}
-PROMPT;
+        قائمة التصنيفات المسموح بها:
+        {$allowedList}
+
+        سؤال المستخدم:
+        {$content}
+        PROMPT;
     }
 
     /**

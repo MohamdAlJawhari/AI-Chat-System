@@ -3,5 +3,6 @@ export const state = {
   currentChatId: null,
   chatsCache: [],
   sidebarHidden: false,
+  archiveDrawerHidden: false,
   archiveEnabled: false,
 };

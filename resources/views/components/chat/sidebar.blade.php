@@ -8,7 +8,7 @@
         <i class="fa-solid fa-plus"></i>
     </button>
     <div class="text-xs uppercase tracking-wide mb-2" style="color: color-mix(in srgb, var(--text) 60%, transparent)">Chats</div>
-    <div id="chatList" class="space-y-1 overflow-y-auto grow">
+    <div id="chatList" class="text-sm space-y-1 overflow-y-auto grow">
     </div>
     <div class="pt-4 text-xs" style="color: color-mix(in srgb, var(--text) 60%, transparent)">
         <div id="authStatus" class="flex items-center gap-2">

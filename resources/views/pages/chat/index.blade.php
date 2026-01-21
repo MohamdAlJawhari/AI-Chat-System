@@ -7,6 +7,7 @@
             <x-chat.message-list />
             <x-chat.composer />
         </main>
+        <x-chat.archive-drawer />
     </div>
 
     <template id="empty-state-template">

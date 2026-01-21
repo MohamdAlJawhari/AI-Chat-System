@@ -38,20 +38,23 @@ class CountryFilterRouter
     private function buildPrompt(string $content, string $allowedList): string
     {
         return <<<PROMPT
-You select the best Country filter for a newsroom archive search.
-Return ONLY valid JSON:
-{"value": string|null}
+        أنت مسؤول عن اختيار أفضل فلتر "الدولة" لعملية البحث داخل أرشيف غرفة الأخبار.
 
-Rules:
-- Choose at most one value from the allowed list; if no match, return null.
-- Do NOT invent values.
-- Country is the highest priority filter. Choose the best matching country when any location is implied.
+        أعد النتيجة بصيغة JSON صحيحة فقط:
+        {"value": string|null}
 
-Allowed Country values: {$allowedList}
+        القواعد:
+        - اختر قيمة واحدة كحد أقصى من القائمة المسموح بها.
+        - إذا لم يوجد تطابق واضح، أعد القيمة null.
+        - ممنوع اختراع أو تخمين أي قيمة غير موجودة في القائمة.
+        - فلتر الدولة هو الأعلى أولوية: إذا وُجد أي تلميح جغرافي، اختر الدولة الأنسب.
 
-User query:
-{$content}
-PROMPT;
+        قائمة الدول المسموح بها:
+        {$allowedList}
+
+        سؤال المستخدم:
+        {$content}
+        PROMPT;
     }
 
     /**
