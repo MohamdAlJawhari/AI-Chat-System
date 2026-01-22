@@ -7,7 +7,7 @@
 <aside id="archiveDrawer" style="width: var(--archive-w, 22rem); background: linear-gradient(180deg, rgba(10, 20, 44, 0.92) 0%, rgba(12, 24, 56, 0.95) 45%, rgba(8, 18, 40, 0.92) 100%), var(--surface); border-left: 1px solid var(--border-muted); overflow-y: auto;"
     class="shrink-0 backdrop-blur p-4 flex flex-col transition-[width] duration-200 ease-in-out overflow-hidden">
     <div class="flex items-center justify-between mb-3">
-        <div class="text-xs uppercase tracking-wide" style="color: color-mix(in srgb, var(--text) 60%, transparent)"><b>Archive Controls</b></div>
+        <div class="text-xs uppercase tracking-wide" style="color: color-mix(in srgb, var(--text) 90%, transparent)"><b>Archive Controls</b></div>
     </div>
 
     <div class="space-y-4">
