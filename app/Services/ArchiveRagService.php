@@ -19,7 +19,7 @@ class ArchiveRagService
      */
     public function buildContext(string $query, ?int $limit = null, array $filters = [], array $weights = []): array
     {
-        $limit = $limit ?? (int) config('rag.doc_limit', 15);
+        $limit = $limit ?? (int) config('rag.doc_limit', 20);
         $originalQuery = trim($query);
         $rewrite = $this->rewriter->rewrite($originalQuery);
         $searchQuery = $rewrite['query'] !== '' ? $rewrite['query'] : $originalQuery;
@@ -48,11 +48,11 @@ class ArchiveRagService
 
         $instruction = trim((string) config('rag.instruction', ''));
         $rules = $instruction !== '' ? $instruction : implode("\n", [
-            "You are a press assistant. Use ONLY the sources inside <<ARCHIVE>>.",
-            "Do NOT invent facts, numbers, dates, names, or events not explicitly in sources.",
-            "When you use a claim, cite it like [1] or [2].",
-            "If the sources are insufficient, say: 'المصادر في الأرشيف غير كافية للإجابة بدقة.' But give answer if possible.",
-            "Write a concise answer first, then (optional) a short timeline or bullets if asked.",
+            "You are a press assistant. Use the sources inside <<ARCHIVE>> as primary evidence",
+            "Do NOT invent facts, numbers, dates, names, locations, or events not stated in the sources",
+            "Cite evidence for every factual claim taken from the archive",
+            "Always give your best full answer using your own knowledge. If the archive does not provide enough information, append this sentence at the end verbatim: 'المصادر في الأرشيف غير كافية للإجابة بدقة.' Never give the insufficiency sentence alone",
+            "You may add brief general background ONLY if you label it clearly as \"معلومة عامة\" and keep it to 2 sentences max.",
         ]);
         $bodyLimit = max(200, (int) config('rag.body_character_limit', 500));
 
@@ -69,7 +69,7 @@ class ArchiveRagService
             $title = trim((string) ($row->title ?? ''));
             $intro = trim((string) ($row->introduction ?? ''));
             $snippet = $this->cleanSnippet($row->best_snippet ?? '');
-            $bodyExcerpt = $this->truncate($row->body ?? '', min($bodyLimit, 350));
+            $bodyExcerpt = $this->truncate($row->body ?? '', min($bodyLimit, 250));
             // $bodyExcerpt = $this->truncate($row->body ?? '', $bodyLimit);
 
             $source = [

@@ -2,7 +2,7 @@
 
 return [
     // Default number of archive documents to fetch for RAG responses
-    'doc_limit' => (int) env('RAG_DOC_LIMIT', 15),
+    'doc_limit' => (int) env('RAG_DOC_LIMIT', 20),
 
     // How many chunks per document the hybrid function should consider internally
     'per_doc' => (int) env('RAG_PER_DOC', 3),
@@ -15,7 +15,7 @@ return [
     'hnsw_ef_search' => (int) env('RAG_HNSW_EF_SEARCH', 160),
 
     // Cap the amount of article body text sent to the LLM
-    'body_character_limit' => (int) env('RAG_BODY_CHAR_LIMIT', 500),
+    'body_character_limit' => (int) env('RAG_BODY_CHAR_LIMIT', 250),
 
     // Auto filter/weight router settings
     'auto_router' => [
