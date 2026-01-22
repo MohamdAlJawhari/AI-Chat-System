@@ -64,26 +64,36 @@ function applyChatSelectors(chat){
 }
 
 function initArchiveSwitch(){
-  const toggle = elements.archiveToggle;
+  const select = elements.archiveModeSelect;
   const badge = elements.archiveModeBadge;
   const storageKey = 'uchat:archive-mode';
-  if (!toggle) return;
+  if (!select) return;
 
-  const stored = localStorage.getItem(storageKey);
-  state.archiveEnabled = stored === 'on';
-  toggle.checked = state.archiveEnabled;
+  const stored = (localStorage.getItem(storageKey) || '').toLowerCase();
+  const initial = ['on', 'off', 'auto'].includes(stored) ? stored : 'off';
+  state.archiveMode = initial;
+  select.value = initial;
 
   const syncBadge = () => {
     if (!badge) return;
-    badge.textContent = state.archiveEnabled ? 'Archive On' : 'Archive Off';
-    badge.style.color = state.archiveEnabled ? '#34d399' : '';
+    if (state.archiveMode === 'on') {
+      badge.textContent = 'Archive On';
+      badge.style.color = '#34d399';
+    } else if (state.archiveMode === 'auto') {
+      badge.textContent = 'Archive Auto';
+      badge.style.color = '#60a5fa';
+    } else {
+      badge.textContent = 'Archive Off';
+      badge.style.color = '#f57567';
+    }
   };
 
   syncBadge();
 
-  toggle.addEventListener('change', () => {
-    state.archiveEnabled = toggle.checked;
-    localStorage.setItem(storageKey, state.archiveEnabled ? 'on' : 'off');
+  select.addEventListener('change', () => {
+    const next = (select.value || '').toLowerCase();
+    state.archiveMode = ['on', 'off', 'auto'].includes(next) ? next : 'off';
+    localStorage.setItem(storageKey, state.archiveMode);
     syncBadge();
   });
 }

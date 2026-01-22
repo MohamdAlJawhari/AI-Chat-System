@@ -29,6 +29,13 @@ return [
         ), fn($v) => $v !== '')),
     ],
 
+    // Auto archive decision settings (used when archive mode is "auto")
+    'auto_archive' => [
+        'enabled' => (bool) env('RAG_AUTO_ARCHIVE', true),
+        'model' => env('RAG_AUTO_ARCHIVE_MODEL', ''),
+        'http_timeout' => (int) env('RAG_AUTO_ARCHIVE_TIMEOUT', 8),
+    ],
+
     // Optional query rewrite for hybrid search
     'query_rewrite' => [
         'enabled' => (bool) env('RAG_QUERY_REWRITE', true),

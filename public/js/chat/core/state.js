@@ -4,5 +4,5 @@ export const state = {
   chatsCache: [],
   sidebarHidden: false,
   archiveDrawerHidden: false,
-  archiveEnabled: false,
+  archiveMode: 'off',
 };

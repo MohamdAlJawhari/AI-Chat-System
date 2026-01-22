@@ -32,6 +32,7 @@ class MessageSendController extends Controller
             'content' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],
             'archive_search' => ['nullable', 'boolean'],
+            'archive_mode' => ['nullable', 'string', Rule::in(['on', 'off', 'auto'])],
             'auto_filters' => ['nullable', 'boolean'],
             'auto_weights' => ['nullable', 'boolean'],
             'filters' => ['nullable', 'array'],
@@ -46,9 +47,13 @@ class MessageSendController extends Controller
             'weights.beta' => ['nullable', 'numeric'],
         ]);
 
-        $useArchive = $request->boolean('archive_search');
         $incomingContent = $request->input('content');
-        $filters = $this->pipeline->normalizeArchiveFilters($request);
+        $archiveDecision = $this->pipeline->resolveArchiveDecision($request, $incomingContent);
+        $archiveMode = $archiveDecision['mode'] ?? 'off';
+        $useArchive = (bool) ($archiveDecision['use'] ?? false);
+        $decisionMeta = is_array($archiveDecision['decision'] ?? null) ? $archiveDecision['decision'] : null;
+
+        $filters = $this->pipeline->normalizeArchiveFilters($request, $useArchive);
         $searchFilters = $filters['search'];
         $filtersForMetadata = $filters['metadata'];
         $weights = $filters['weights'] ?? [];
@@ -57,6 +62,15 @@ class MessageSendController extends Controller
         $userMetadata = $request->input('metadata', []);
         if (!is_array($userMetadata)) {
             $userMetadata = [];
+        }
+        if ($archiveMode !== 'off') {
+            $userMetadata['archive_mode'] = $archiveMode;
+        }
+        if ($archiveMode === 'auto') {
+            $userMetadata['archive_auto'] = true;
+            $userMetadata['archive_auto_selected'] = $useArchive;
+            $userMetadata['archive_auto_reason'] = data_get($decisionMeta, 'reason') ?: null;
+            $userMetadata['archive_auto_source'] = data_get($decisionMeta, 'source') ?: null;
         }
         if ($useArchive) {
             $userMetadata['archive_search'] = true;
@@ -135,6 +149,11 @@ class MessageSendController extends Controller
             'metadata' => array_filter([
                 'model' => trim($modelFromSettings ?? (string) config('llm.model')),
                 'archive_search' => $useArchive ?: null,
+                'archive_mode' => $archiveMode !== 'off' ? $archiveMode : null,
+                'archive_auto' => $archiveMode === 'auto' ? true : null,
+                'archive_auto_selected' => $archiveMode === 'auto' ? $useArchive : null,
+                'archive_auto_reason' => $archiveMode === 'auto' ? (data_get($decisionMeta, 'reason') ?: null) : null,
+                'archive_auto_source' => $archiveMode === 'auto' ? (data_get($decisionMeta, 'source') ?: null) : null,
                 'sources' => !empty($ragSources) ? $ragSources : null,
                 'query' => $useArchive && !empty($ragQuery) ? $ragQuery : null,
                 'query_original' => $useArchive && !empty($ragQueryOriginal) ? $ragQueryOriginal : null,

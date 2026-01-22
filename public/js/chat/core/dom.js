@@ -27,6 +27,6 @@ export const elements = {
   get archiveDrawerToggle() { return document.getElementById('archiveDrawerToggle'); },
   get archiveDrawerIcon() { return document.getElementById('archiveDrawerIcon'); },
   get themeToggle() { return document.getElementById('themeToggle'); },
-  get archiveToggle() { return document.getElementById('archiveToggle'); },
+  get archiveModeSelect() { return document.getElementById('archiveModeSelect'); },
   get archiveModeBadge() { return document.getElementById('archiveModeBadge'); },
 };

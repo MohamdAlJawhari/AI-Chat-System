@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Chat;
 use App\Services\ArchiveRagService;
+use App\Services\ArchiveUseDecider;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -15,8 +16,9 @@ class MessagePipeline
      *
      * @return array{search: array<string, mixed>, metadata: array<string, mixed>, weights: array<string, float>, auto: array<string, mixed>}
      */
-    public function normalizeArchiveFilters(Request $request): array
+    public function normalizeArchiveFilters(Request $request, ?bool $useArchive = null): array
     {
+        $useArchive = $useArchive ?? $request->boolean('archive_search');
         $filtersInput = $request->input('filters', []);
         if (!is_array($filtersInput)) {
             $filtersInput = [];
@@ -24,7 +26,7 @@ class MessagePipeline
 
         $autoFilters = $request->boolean('auto_filters');
         $autoWeights = $request->boolean('auto_weights');
-        if (!$request->boolean('archive_search')) {
+        if (!$useArchive) {
             $autoFilters = false;
             $autoWeights = false;
         }
@@ -159,6 +161,32 @@ class MessagePipeline
             'metadata' => array_filter($metadataFilters, fn($v) => $v !== null),
             'weights' => $weights,
             'auto' => $autoMeta,
+        ];
+    }
+
+    /**
+     * @return array{mode:string,use:bool,decision:?array<string,mixed>}
+     */
+    public function resolveArchiveDecision(Request $request, ?string $incomingContent = null): array
+    {
+        $modeRaw = strtolower(trim((string) $request->input('archive_mode', '')));
+        $mode = in_array($modeRaw, ['on', 'off', 'auto'], true)
+            ? $modeRaw
+            : ($request->boolean('archive_search') ? 'on' : 'off');
+
+        $decision = null;
+        $useArchive = $mode === 'on';
+
+        if ($mode === 'auto') {
+            $content = $incomingContent ?? (string) $request->input('content', '');
+            $decision = app(ArchiveUseDecider::class)->decide($content);
+            $useArchive = (bool) data_get($decision, 'use_archive', false);
+        }
+
+        return [
+            'mode' => $mode,
+            'use' => $useArchive,
+            'decision' => $decision,
         ];
     }
 

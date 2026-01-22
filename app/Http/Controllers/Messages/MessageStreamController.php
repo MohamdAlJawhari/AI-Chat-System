@@ -33,6 +33,7 @@ class MessageStreamController extends Controller
             'role' => ['required', 'string', Rule::in(['user'])],
             'content' => ['required', 'string'],
             'archive_search' => ['nullable', 'boolean'],
+            'archive_mode' => ['nullable', 'string', Rule::in(['on', 'off', 'auto'])],
             'auto_filters' => ['nullable', 'boolean'],
             'auto_weights' => ['nullable', 'boolean'],
             'filters' => ['nullable', 'array'],
@@ -47,34 +48,43 @@ class MessageStreamController extends Controller
             'weights.beta' => ['nullable', 'numeric'],
         ]);
 
-        $useArchive = $request->boolean('archive_search');
         $incomingContent = $request->input('content');
-        $filters = $this->pipeline->normalizeArchiveFilters($request);
+        $archiveDecision = $this->pipeline->resolveArchiveDecision($request, $incomingContent);
+        $archiveMode = $archiveDecision['mode'] ?? 'off';
+        $useArchive = (bool) ($archiveDecision['use'] ?? false);
+        $decisionMeta = is_array($archiveDecision['decision'] ?? null) ? $archiveDecision['decision'] : null;
+
+        $filters = $this->pipeline->normalizeArchiveFilters($request, $useArchive);
         $searchFilters = $filters['search'];
         $filtersForMetadata = $filters['metadata'];
         $weights = $filters['weights'] ?? [];
         $autoMeta = $filters['auto'] ?? [];
 
         // Save user message
+        $userMeta = array_filter([
+            'archive_mode' => $archiveMode !== 'off' ? $archiveMode : null,
+            'archive_auto' => $archiveMode === 'auto' ? true : null,
+            'archive_auto_selected' => $archiveMode === 'auto' ? $useArchive : null,
+            'archive_auto_reason' => $archiveMode === 'auto' ? (data_get($decisionMeta, 'reason') ?: null) : null,
+            'archive_auto_source' => $archiveMode === 'auto' ? (data_get($decisionMeta, 'source') ?: null) : null,
+            'archive_search' => $useArchive ? true : null,
+            'archive_filters' => $useArchive ? $filtersForMetadata : null,
+            'archive_weights' => $useArchive && !empty($weights) ? $weights : null,
+            'archive_filters_auto' => $useArchive && data_get($autoMeta, 'filters.selected') ? true : null,
+            'archive_weights_auto' => $useArchive && data_get($autoMeta, 'weights.selected') ? true : null,
+            'archive_filters_reason' => $useArchive ? (data_get($autoMeta, 'filters.reason') ?: null) : null,
+            'archive_filters_source' => $useArchive ? (data_get($autoMeta, 'filters.source') ?: null) : null,
+            'archive_weights_reason' => $useArchive ? (data_get($autoMeta, 'weights.reason') ?: null) : null,
+            'archive_weights_source' => $useArchive ? (data_get($autoMeta, 'weights.source') ?: null) : null,
+        ], fn($v) => $v !== null && $v !== []);
+
         $userMsg = Message::create([
             'id' => (string) \Illuminate\Support\Str::uuid(),
             'chat_id' => $request->chat_id,
             'user_id' => (int) (Auth::id() ?? 0),
             'role' => 'user',
             'content' => $incomingContent,
-            'metadata' => $useArchive
-                ? array_filter([
-                    'archive_search' => true,
-                    'archive_filters' => $filtersForMetadata,
-                    'archive_weights' => !empty($weights) ? $weights : null,
-                    'archive_filters_auto' => data_get($autoMeta, 'filters.selected') ? true : null,
-                    'archive_weights_auto' => data_get($autoMeta, 'weights.selected') ? true : null,
-                    'archive_filters_reason' => data_get($autoMeta, 'filters.reason') ?: null,
-                    'archive_filters_source' => data_get($autoMeta, 'filters.source') ?: null,
-                    'archive_weights_reason' => data_get($autoMeta, 'weights.reason') ?: null,
-                    'archive_weights_source' => data_get($autoMeta, 'weights.source') ?: null,
-                ], fn($v) => $v !== null && $v !== [])
-                : null,
+            'metadata' => !empty($userMeta) ? $userMeta : null,
         ]);
 
         $chat = Chat::findOrFail($request->chat_id);
@@ -130,7 +140,7 @@ class MessageStreamController extends Controller
 
         $assistantId = (string) \Illuminate\Support\Str::uuid();
 
-        return response()->stream(function () use ($httpRes, $chat, $assistantId, $model, $ragSources, $ragQuery, $ragQueryOriginal, $ragQueryRewrite, $useArchive, $filtersForMetadata, $weights, $autoMeta, $persona) {
+        return response()->stream(function () use ($httpRes, $chat, $assistantId, $model, $ragSources, $ragQuery, $ragQueryOriginal, $ragQueryRewrite, $useArchive, $archiveMode, $decisionMeta, $filtersForMetadata, $weights, $autoMeta, $persona) {
             @ignore_user_abort(true);
             @set_time_limit(0); // avoid PHP max_execution_time cutting long streams
             $body = $httpRes->toPsrResponse()->getBody();
@@ -141,7 +151,7 @@ class MessageStreamController extends Controller
             $assistantCreated = false;
             $lastPersistLen = 0;
 
-            $buildAssistantMetadata = function (string $modelName) use ($useArchive, $ragSources, $ragQuery, $ragQueryOriginal, $ragQueryRewrite, $filtersForMetadata, $weights, $autoMeta, $persona): array {
+            $buildAssistantMetadata = function (string $modelName) use ($useArchive, $archiveMode, $decisionMeta, $ragSources, $ragQuery, $ragQueryOriginal, $ragQueryRewrite, $filtersForMetadata, $weights, $autoMeta, $persona): array {
                 $meta = [
                     'model' => $modelName,
                     'persona' => $persona['name'] ?? null,
@@ -149,6 +159,11 @@ class MessageStreamController extends Controller
                     'persona_reason' => $persona['reason'] ?? null,
                     'persona_auto' => !empty($persona['auto_selected']) ? true : null,
                     'persona_source' => $persona['source'] ?? null,
+                    'archive_mode' => $archiveMode !== 'off' ? $archiveMode : null,
+                    'archive_auto' => $archiveMode === 'auto' ? true : null,
+                    'archive_auto_selected' => $archiveMode === 'auto' ? $useArchive : null,
+                    'archive_auto_reason' => $archiveMode === 'auto' ? (data_get($decisionMeta, 'reason') ?: null) : null,
+                    'archive_auto_source' => $archiveMode === 'auto' ? (data_get($decisionMeta, 'source') ?: null) : null,
                 ];
                 if ($useArchive) {
                     $meta['archive_search'] = true;
@@ -193,6 +208,11 @@ class MessageStreamController extends Controller
             $initialMeta = [
                 'model' => $modelUsed,
                 'archive_search' => $useArchive ? true : null,
+                'archive_mode' => $archiveMode !== 'off' ? $archiveMode : null,
+                'archive_auto' => $archiveMode === 'auto' ? true : null,
+                'archive_auto_selected' => $archiveMode === 'auto' ? $useArchive : null,
+                'archive_auto_reason' => $archiveMode === 'auto' ? (data_get($decisionMeta, 'reason') ?: null) : null,
+                'archive_auto_source' => $archiveMode === 'auto' ? (data_get($decisionMeta, 'source') ?: null) : null,
                 'rag_sources' => $ragSources,
                 'query' => $ragQuery ?: null,
                 'query_original' => $ragQueryOriginal ?: null,
