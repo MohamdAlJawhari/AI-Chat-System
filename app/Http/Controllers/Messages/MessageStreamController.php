@@ -48,6 +48,9 @@ class MessageStreamController extends Controller
             'weights.beta' => ['nullable', 'numeric'],
         ]);
 
+        @ignore_user_abort(true);
+        @set_time_limit(0);
+
         $incomingContent = $request->input('content');
         $archiveDecision = $this->pipeline->resolveArchiveDecision($request, $incomingContent);
         $archiveMode = $archiveDecision['mode'] ?? 'off';
