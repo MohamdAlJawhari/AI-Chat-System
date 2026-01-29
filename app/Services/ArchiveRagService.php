@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\DB;
+
 class ArchiveRagService
 {
     public function __construct(
@@ -57,6 +59,22 @@ class ArchiveRagService
         $bodyLimit = max(200, (int) config('rag.body_character_limit', 500));
 
         $sources = [];
+        $summaryMap = [];
+        $summaryLimit = max(200, (int) config('rag.summary.max_chars', 1200));
+
+        $newsIds = [];
+        foreach ($results as $row) {
+            if (!empty($row->news_id)) {
+                $newsIds[] = (int) $row->news_id;
+            }
+        }
+        $newsIds = array_values(array_unique($newsIds));
+        if ($newsIds) {
+            $summaryMap = DB::table('news_summaries')
+                ->whereIn('news_id', $newsIds)
+                ->pluck('summary', 'news_id')
+                ->all();
+        }
         $contextParts = [
             "<<ARCHIVE>>",
             $rules,
@@ -70,6 +88,8 @@ class ArchiveRagService
             $intro = trim((string) ($row->introduction ?? ''));
             $snippet = $this->cleanSnippet($row->best_snippet ?? '');
             $bodyExcerpt = $this->truncate($row->body ?? '', min($bodyLimit, 250));
+            $summary = trim((string) ($summaryMap[(int) ($row->news_id ?? 0)] ?? ''));
+            $summaryExcerpt = $summary !== '' ? $this->truncate($summary, $summaryLimit) : '';
             // $bodyExcerpt = $this->truncate($row->body ?? '', $bodyLimit);
 
             $source = [
@@ -88,10 +108,14 @@ class ArchiveRagService
 
             $lines = [$segment];
 
-            if ($snippet !== '') $lines[] = "Snippet: {$snippet}";
-            elseif ($intro !== '') $lines[] = "Intro: {$intro}";
-            
-            if ($bodyExcerpt !== '') $lines[] = "Excerpt: {$bodyExcerpt}";
+            if ($summaryExcerpt !== '') {
+                $lines[] = "Summary:\n{$summaryExcerpt}";
+            } else {
+                if ($snippet !== '') $lines[] = "Snippet: {$snippet}";
+                elseif ($intro !== '') $lines[] = "Intro: {$intro}";
+
+                if ($bodyExcerpt !== '') $lines[] = "Excerpt: {$bodyExcerpt}";
+            }
 
             $lines[] = "---";
             $contextParts[] = implode("\n", $lines);

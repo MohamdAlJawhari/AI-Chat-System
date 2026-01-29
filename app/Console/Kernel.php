@@ -9,5 +9,7 @@ class Kernel extends ConsoleKernel
 {
     protected $commands = [
         \App\Console\Commands\IngestQueueWorker::class,
+        \App\Console\Commands\SummaryQueueWorker::class,
+        \App\Console\Commands\SummaryBackfill::class,
     ];
 }

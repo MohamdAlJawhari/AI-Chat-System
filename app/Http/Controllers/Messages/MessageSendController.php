@@ -11,6 +11,7 @@ use App\Services\MessagePipeline;
 use App\Support\Title;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 
 class MessageSendController extends Controller
@@ -135,52 +136,64 @@ class MessageSendController extends Controller
             $messages[] = ['role' => $m->role, 'content' => $m->content];
         }
 
-        // Call local LLM (Ollama)
-        $modelFromSettings = data_get($chat->settings, 'model'); // optional override per chat
-        $assistantText = app(LlmClient::class)->chat($messages, $modelFromSettings, $persona['overrides']);
+        $pauseKey = (string) config('rag.summary.pause_key', 'chat.active');
+        $pauseTtl = (int) config('rag.summary.pause_ttl', 600);
+        if ($pauseKey !== '') {
+            Cache::put($pauseKey, true, $pauseTtl);
+        }
 
-        // Save assistant reply
-        $assistant = Message::create([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
-            'chat_id' => $chat->id,
-            'user_id' => null,
-            'role' => 'assistant',
-            'content' => $assistantText,
-            'metadata' => array_filter([
-                'model' => trim($modelFromSettings ?? (string) config('llm.model')),
-                'archive_search' => $useArchive ?: null,
-                'archive_mode' => $archiveMode !== 'off' ? $archiveMode : null,
-                'archive_auto' => $archiveMode === 'auto' ? true : null,
-                'archive_auto_selected' => $archiveMode === 'auto' ? $useArchive : null,
-                'archive_auto_reason' => $archiveMode === 'auto' ? (data_get($decisionMeta, 'reason') ?: null) : null,
-                'archive_auto_source' => $archiveMode === 'auto' ? (data_get($decisionMeta, 'source') ?: null) : null,
-                'sources' => !empty($ragSources) ? $ragSources : null,
-                'query' => $useArchive && !empty($ragQuery) ? $ragQuery : null,
-                'query_original' => $useArchive && !empty($ragQueryOriginal) ? $ragQueryOriginal : null,
-                'query_rewrite' => $useArchive && !empty($ragQueryRewrite) ? $ragQueryRewrite : null,
-                'filters' => $useArchive ? $filtersForMetadata : null,
-                'weights' => $useArchive && !empty($weights) ? $weights : null,
-                'filters_auto' => data_get($autoMeta, 'filters.selected') ? true : null,
-                'filters_reason' => data_get($autoMeta, 'filters.reason') ?: null,
-                'filters_source' => data_get($autoMeta, 'filters.source') ?: null,
-                'weights_auto' => data_get($autoMeta, 'weights.selected') ? true : null,
-                'weights_reason' => data_get($autoMeta, 'weights.reason') ?: null,
-                'weights_source' => data_get($autoMeta, 'weights.source') ?: null,
-                'persona' => $persona['name'] ?? null,
-                'persona_requested' => $persona['requested'] ?? null,
-                'persona_reason' => $persona['reason'] ?? null,
-                'persona_auto' => !empty($persona['auto_selected']) ? true : null,
-                'persona_source' => $persona['source'] ?? null,
-            ], fn($v) => $v !== null && $v !== []),
-        ]);
+        try {
+            // Call local LLM (Ollama)
+            $modelFromSettings = data_get($chat->settings, 'model'); // optional override per chat
+            $assistantText = app(LlmClient::class)->chat($messages, $modelFromSettings, $persona['overrides']);
 
-        // Generate title now that we have both sides of the start of the conversation
-        if (empty($chat->title)) {
-            try {
-                $chat->title = Title::generateFromChatStart($chat, $modelFromSettings);
-                $chat->save();
-            } catch (\Throwable $e) {
-                /* ignore */
+            // Save assistant reply
+            $assistant = Message::create([
+                'id' => (string) \Illuminate\Support\Str::uuid(),
+                'chat_id' => $chat->id,
+                'user_id' => null,
+                'role' => 'assistant',
+                'content' => $assistantText,
+                'metadata' => array_filter([
+                    'model' => trim($modelFromSettings ?? (string) config('llm.model')),
+                    'archive_search' => $useArchive ?: null,
+                    'archive_mode' => $archiveMode !== 'off' ? $archiveMode : null,
+                    'archive_auto' => $archiveMode === 'auto' ? true : null,
+                    'archive_auto_selected' => $archiveMode === 'auto' ? $useArchive : null,
+                    'archive_auto_reason' => $archiveMode === 'auto' ? (data_get($decisionMeta, 'reason') ?: null) : null,
+                    'archive_auto_source' => $archiveMode === 'auto' ? (data_get($decisionMeta, 'source') ?: null) : null,
+                    'sources' => !empty($ragSources) ? $ragSources : null,
+                    'query' => $useArchive && !empty($ragQuery) ? $ragQuery : null,
+                    'query_original' => $useArchive && !empty($ragQueryOriginal) ? $ragQueryOriginal : null,
+                    'query_rewrite' => $useArchive && !empty($ragQueryRewrite) ? $ragQueryRewrite : null,
+                    'filters' => $useArchive ? $filtersForMetadata : null,
+                    'weights' => $useArchive && !empty($weights) ? $weights : null,
+                    'filters_auto' => data_get($autoMeta, 'filters.selected') ? true : null,
+                    'filters_reason' => data_get($autoMeta, 'filters.reason') ?: null,
+                    'filters_source' => data_get($autoMeta, 'filters.source') ?: null,
+                    'weights_auto' => data_get($autoMeta, 'weights.selected') ? true : null,
+                    'weights_reason' => data_get($autoMeta, 'weights.reason') ?: null,
+                    'weights_source' => data_get($autoMeta, 'weights.source') ?: null,
+                    'persona' => $persona['name'] ?? null,
+                    'persona_requested' => $persona['requested'] ?? null,
+                    'persona_reason' => $persona['reason'] ?? null,
+                    'persona_auto' => !empty($persona['auto_selected']) ? true : null,
+                    'persona_source' => $persona['source'] ?? null,
+                ], fn($v) => $v !== null && $v !== []),
+            ]);
+
+            // Generate title now that we have both sides of the start of the conversation
+            if (empty($chat->title)) {
+                try {
+                    $chat->title = Title::generateFromChatStart($chat, $modelFromSettings);
+                    $chat->save();
+                } catch (\Throwable $e) {
+                    /* ignore */
+                }
+            }
+        } finally {
+            if ($pauseKey !== '') {
+                Cache::forget($pauseKey);
             }
         }
 

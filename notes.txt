@@ -1,0 +1,4 @@
+php artisan summaries:backfill --limit=100
+php artisan summaries:queue
+
+The line that swaps in the summary (otherwise falls back to the raw snippet/intro/excerpt): ArchiveRagService.php (line 111)

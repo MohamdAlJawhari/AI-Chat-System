@@ -32,4 +32,9 @@ class News extends Model
     {
         return $this->hasMany(NewsChunk::class, 'news_id');
     }
+
+    public function summary()
+    {
+        return $this->hasOne(NewsSummary::class, 'news_id');
+    }
 }

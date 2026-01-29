@@ -17,6 +17,14 @@ return [
     // Cap the amount of article body text sent to the LLM
     'body_character_limit' => (int) env('RAG_BODY_CHAR_LIMIT', 250),
 
+    // Precomputed summary settings
+    'summary' => [
+        'input_char_limit' => (int) env('RAG_SUMMARY_INPUT_CHAR_LIMIT', 12000),
+        'max_chars' => (int) env('RAG_SUMMARY_MAX_CHARS', 1200),
+        'pause_key' => env('RAG_SUMMARY_PAUSE_KEY', 'chat.active'),
+        'pause_ttl' => (int) env('RAG_SUMMARY_PAUSE_TTL', 600),
+    ],
+
     // Auto filter/weight router settings
     'auto_router' => [
         'model' => env('RAG_AUTO_ROUTER_MODEL', ''),
