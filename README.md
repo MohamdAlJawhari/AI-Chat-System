@@ -1,17 +1,18 @@
-# UChat — Laravel + Ollama Chat (Streaming)
+# UChat — Laravel + Ollama Chat (Streaming + Archive RAG)
 
-UChat is a lightweight ChatGPT‑style web app built with Laravel. It talks to a locally running open‑source LLM (via Ollama), supports streaming responses, Markdown tables and Mermaid diagrams, right‑to‑left text, per‑chat model selection, and a clean, modular front‑end.
+UChat is a local‑first ChatGPT‑style web app built with Laravel. It talks to a locally running open‑source LLM (via Ollama), supports streaming responses, Markdown tables and Mermaid diagrams (sanitized), right‑to‑left text, and an optional archive‑grounded RAG mode backed by Postgres (pgvector + full‑text search).
 
 ## Features
 
 - Streaming chat to a local LLM (Ollama)
 - Chats CRUD: create, rename, delete, list
 - Per‑chat settings: model (selectable from env‑configured list) + persona
+- Archive RAG mode: hybrid retrieval (semantic + lexical) with filters and source metadata
 - Markdown rendering with tables and Mermaid diagrams (sanitized)
 - Automatic RTL/LTR detection (Arabic/Hebrew supported)
 - Auto‑title from the chat start (first user + assistant)
 - Sidebar: resizable and collapsible; subtle gradient background
-- Auth (token‑based), Sign in - تسجيل الدخول / Create account - إنشاء حساب UI
+- Auth (session‑based via Laravel Breeze), Sign in - تسجيل الدخول / Create account - إنشاء حساب UI
 - Admin role (block/unblock users), seeded admin
 - Modular front‑end (vanilla JS ES modules under `public/js/chat/`)
 
@@ -28,7 +29,8 @@ UChat is a lightweight ChatGPT‑style web app built with Laravel. It talks to a
 
 - PHP 8.2+
 - Composer
-- A database (PostgreSQL recommended; migrations include `uuid-ossp` and JSONB)
+- Node.js + npm (for Vite assets)
+- A database (PostgreSQL recommended; migrations create `uuid-ossp`, `unaccent`, and `vector` extensions)
 - Ollama running locally (default `http://127.0.0.1:11434`)
 
 ## Quick Start
@@ -36,10 +38,12 @@ UChat is a lightweight ChatGPT‑style web app built with Laravel. It talks to a
 1) Install dependencies
 
 - `composer install`
+- `npm install`
 - (Optional) `php artisan key:generate` (if `APP_KEY` missing)
 
 2) Configure `.env`
 
+- Copy `.env.example` to `.env` and fill in values.
 - LLM
   - `LLM_BASE_URL=http://127.0.0.1:11434`
   - `LLM_MODEL=gpt-oss:20b` (no trailing spaces)
@@ -67,11 +71,26 @@ Admin credentials
 
 - `ollama pull gpt-oss:20b`
 - `ollama pull openchat`
+- Start Ollama if needed:
+  - `ollama serve`
+  - or `node scripts/start-ollama.js`
 
 5) Run the app
 
-- `php artisan serve`
+- `npm run dev` (Vite)
+- `php artisan serve` (Laravel)
 - Open the URL shown (e.g., `http://127.0.0.1:8000`)
+
+## Optional: Build the Archive Index (Chunk + Embed)
+
+If you ingest news into the `news` table, a DB trigger enqueues items into `news_ingest_queue`. To process the queue and build `news_chunks` embeddings:
+
+- `php artisan ingest:queue`
+
+Optional summaries (used by the RAG context builder when available):
+
+- `php artisan summaries:backfill --limit=100`
+- `php artisan summaries:queue`
 
 ## Using the App
 
@@ -89,15 +108,24 @@ Admin credentials
 Back‑end (Laravel)
 
 - LLM client: `app/Services/LlmClient.php`
-- REST routes: `routes/api.php`
-- Controllers: `app/Http/Controllers/*`
-  - `ChatController` (chats CRUD)
-  - `MessageController` (list + send, with streaming endpoint)
-  - `AuthController` (login, register, logout, me)
-  - `Admin/UserAdminController` (list users, block/unblock)
-- Auth middleware (token): `app/Http/Middleware/AuthToken.php`
+- Routes: `routes/web.php` (includes `/api/*` endpoints under session auth)
+- Controllers:
+  - `app/Http/Controllers/ChatController.php` (chats CRUD)
+  - `app/Http/Controllers/Messages/MessageIndexController.php` (list messages)
+  - `app/Http/Controllers/Messages/MessageSendController.php` (non‑stream chat)
+  - `app/Http/Controllers/Messages/MessageStreamController.php` (SSE streaming chat)
+  - `app/Http/Controllers/HybridSearchController.php` (archive search page)
+  - `app/Http/Controllers/FilterOptionsController.php` (distinct filter options)
+  - `app/Http/Controllers/Admin/UserAdminController.php` (admin user management)
+- Archive services:
+  - `app/Services/HybridSearchService.php` (calls `hybrid_search_docs(...)`)
+  - `app/Services/ArchiveRagService.php` (builds `<<ARCHIVE>>` context + sources)
+  - `app/Services/ArchiveQueryRewriter.php` (optional query rewrite)
+  - `app/Services/ArchiveUseDecider.php` + `app/Services/ArchiveFilterRouter.php` (auto routing)
+  - `app/Services/NewsSummaryService.php` + summary queue workers (optional)
 - Config: `config/llm.php` (base URL, model names, system prompt)
-- Migrations: `database/migrations/*` (UUID ids, JSONB, auth fields)
+- RAG config: `config/rag.php`
+- Migrations: `database/migrations/*` (UUID ids, JSONB, pgvector + SQL search functions)
 - Seeders: `database/seeders/AdminSeeder.php`, `DemoSeeder.php`, `DatabaseSeeder.php`
 
 Front‑end (vanilla JS ES modules)
@@ -107,7 +135,7 @@ Front‑end (vanilla JS ES modules)
   - `core/` — low‑level helpers and state
     - `dom.js`, `state.js`, `rtl.js`, `util.js`
   - `api/` — HTTP utilities
-    - `api.js` (fetch wrappers, CSRF, 401 handling)
+    - `api.js` (fetch wrappers and helpers)
   - `ui/` — presentation helpers
     - `ui.js` (bubbles, chat list), `markdown.js`, `emptyState.js`
   - `features/` — self‑contained feature logic
@@ -119,20 +147,17 @@ Conventions
 - PHP: thin controllers, docblocks on public endpoints; reusable utility in `app/Support`.
 - Styling: one accent color via CSS vars; light/dark handled in the main layout.
 - Views: Blade components render the layout and slots
-  - Layout: `resources/views/components/layouts/app.blade.php`
-  - Chat page: `resources/views/chat.blade.php`
+  - Layout: `resources/views/layouts/app.blade.php`
+  - Chat page: `resources/views/pages/chat/index.blade.php`
   - Chat components: `resources/views/components/chat/*`
 
 ## API Reference (selected)
 
 Auth
 
-- `POST /api/auth/register` — body `{ name, email, password }` → `{ token, user }`
-- `POST /api/auth/login` — body `{ email, password }` → `{ token, user }`
-- `POST /api/auth/logout` — requires `Authorization: Bearer <token>`
-- `GET /api/auth/me` — returns `{ id, name, email, role }`
+- Session auth via Laravel Breeze (routes in `routes/auth.php`); users sign in via the UI.
 
-Chats and messages (all require `Authorization: Bearer <token>`)
+Chats and messages (require an authenticated session cookie)
 
 - `GET /api/chats` — list chats (id, title, settings, created_at)
 - `POST /api/chats` — create chat `{ settings: { model } }` → chat
@@ -141,9 +166,13 @@ Chats and messages (all require `Authorization: Bearer <token>`)
 - `GET /api/chats/{id}/messages` — list messages
 - `POST /api/messages` — add message (non‑stream)
 - `POST /api/messages/stream` — stream assistant reply (SSE)
+- `GET /api/filter-options` — distinct values for filters (categories/countries/cities/date range)
+
+Public
+
 - `GET /api/models` — returns `[LLM_MODEL, LLM_MODEL2]`
 
-Admin (admin token required)
+Admin (admin session required)
 
 - `GET /api/admin/users` — list users
 - `POST /api/admin/users/{user}/block`
@@ -151,7 +180,10 @@ Admin (admin token required)
 
 Headers
 
-- Most endpoints require `Authorization: Bearer <token>` and `Accept: application/json`.
+- Most endpoints are called from the web UI and rely on cookies + CSRF:
+  - `Accept: application/json`
+  - `X-CSRF-TOKEN: <csrf>`
+  - `X-Requested-With: XMLHttpRequest`
 - Streaming uses `Accept: text/event-stream`.
 
 ## LLM Configuration
@@ -163,10 +195,9 @@ Headers
 
 ## Troubleshooting
 
-- “Not signed in - غير مسجّل الدخول” or 401 loop
-  - Clear token in DevTools Console:
-    - `localStorage.removeItem('apiToken'); location.reload();`
-  - Sign in - تسجيل الدخول via the top‑bar user menu or empty state buttons.
+- 401/403/419 issues while calling `/api/*`
+  - Make sure you are signed in (session cookie required).
+  - For POST/PATCH/DELETE requests, ensure your request includes `X-CSRF-TOKEN` (the web UI already does).
 - Windows: `php artisan db` error (TTY not supported)
   - Use `php artisan db:seed` (or `--class=`) instead of `php artisan db`.
 - Postgres: `uuid-ossp`
@@ -178,9 +209,10 @@ Headers
 
 ## Security Notes
 
-- Token auth is stored in localStorage for simplicity; prefer HTTPS and token rotation in production.
+- Session auth + CSRF protection are used for `/api/*` endpoints (intended for the web UI).
+- Chat ownership checks are enforced server-side before writing messages.
 - Markdown output is sanitized with DOMPurify. Only common attributes and tags are allowed.
-- Admin block prevents blocked users from authenticating to protected APIs.
+- Admin block prevents blocked users from accessing protected areas.
 
 ## License
 
