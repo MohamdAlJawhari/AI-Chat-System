@@ -53,6 +53,9 @@ class MessageStreamController extends Controller
         @set_time_limit(0);
 
         $incomingContent = $request->input('content');
+        $chat = Chat::findOrFail($request->chat_id);
+        $this->assertOwns($chat);
+
         $archiveDecision = $this->pipeline->resolveArchiveDecision($request, $incomingContent);
         $archiveMode = $archiveDecision['mode'] ?? 'off';
         $useArchive = (bool) ($archiveDecision['use'] ?? false);
@@ -90,9 +93,6 @@ class MessageStreamController extends Controller
             'content' => $incomingContent,
             'metadata' => !empty($userMeta) ? $userMeta : null,
         ]);
-
-        $chat = Chat::findOrFail($request->chat_id);
-        $this->assertOwns($chat);
 
         $history = $chat->messages()->orderBy('created_at')->take(20)->get();
         $messages = [];
@@ -137,8 +137,18 @@ class MessageStreamController extends Controller
             Cache::put($pauseKey, true, $pauseTtl);
         }
 
-        $httpRes = \Illuminate\Support\Facades\Http::withOptions(['stream' => true, 'timeout' => 0])
-            ->post("$base/api/chat", $payload);
+        try {
+            $httpRes = \Illuminate\Support\Facades\Http::withOptions(['stream' => true, 'timeout' => 0])
+                ->post("$base/api/chat", $payload);
+        } catch (\Throwable $e) {
+            if ($pauseKey !== '') {
+                Cache::forget($pauseKey);
+            }
+            return response()->json([
+                'message' => 'LLM call failed',
+                'error' => $e->getMessage(),
+            ], 502);
+        }
 
         if ($httpRes->failed()) {
             if ($pauseKey !== '') {

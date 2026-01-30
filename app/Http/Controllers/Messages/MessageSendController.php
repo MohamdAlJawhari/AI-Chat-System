@@ -49,6 +49,9 @@ class MessageSendController extends Controller
         ]);
 
         $incomingContent = $request->input('content');
+        $chat = Chat::findOrFail($request->chat_id);
+        $this->assertOwns($chat);
+
         $archiveDecision = $this->pipeline->resolveArchiveDecision($request, $incomingContent);
         $archiveMode = $archiveDecision['mode'] ?? 'off';
         $useArchive = (bool) ($archiveDecision['use'] ?? false);
@@ -109,9 +112,6 @@ class MessageSendController extends Controller
         }
 
         // Build short history + system prompt
-        $chat = Chat::findOrFail($request->chat_id);
-        $this->assertOwns($chat);
-
         $history = $chat->messages()->orderBy('created_at')->take(20)->get();
         $messages = [];
 

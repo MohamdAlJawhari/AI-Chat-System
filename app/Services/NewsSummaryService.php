@@ -12,7 +12,7 @@ class NewsSummaryService
     }
 
     /**
-     * Summarize a news item into a compact, labeled plain-text block.
+     * Summarize a news item into a compact plain-text block.
      *
      * @return array{summary:string,model:string}
      */
@@ -99,27 +99,7 @@ class NewsSummaryService
         if ($raw === '') {
             return $this->emptySummary();
         }
-
-        $required = ['MAIN IDEA:', 'KEY EVENTS:', 'FACTS:', 'KEYWORDS:'];
-        $hasAll = true;
-        foreach ($required as $label) {
-            if (stripos($raw, $label) === false) {
-                $hasAll = false;
-                break;
-            }
-        }
-
-        if ($hasAll) {
-            return $raw;
-        }
-
-        $firstLine = trim((string) strtok($raw, "\n"));
-        $main = $firstLine !== '' ? $firstLine : 'Unknown';
-
-        return "MAIN IDEA: {$main}\n"
-            . "KEY EVENTS:\n- Unknown\n"
-            . "FACTS:\n- Unknown\n"
-            . "KEYWORDS: Unknown";
+        return $raw;
     }
 
     private function limitSummary(string $summary): string

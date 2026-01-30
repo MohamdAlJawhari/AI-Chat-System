@@ -87,7 +87,7 @@ class ArchiveRagService
             $title = trim((string) ($row->title ?? ''));
             $intro = trim((string) ($row->introduction ?? ''));
             $snippet = $this->cleanSnippet($row->best_snippet ?? '');
-            $bodyExcerpt = $this->truncate($row->body ?? '', min($bodyLimit, 250));
+            $bodyExcerpt = $this->truncate($row->body ?? '', $bodyLimit);
             $summary = trim((string) ($summaryMap[(int) ($row->news_id ?? 0)] ?? ''));
             $summaryExcerpt = $summary !== '' ? $this->truncate($summary, $summaryLimit) : '';
             // $bodyExcerpt = $this->truncate($row->body ?? '', $bodyLimit);
