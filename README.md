@@ -1,6 +1,8 @@
 # UChat — Laravel + Ollama Chat (Streaming + Archive RAG)
+I integrated a locally hosted LLM through Ollama's OpenAI-compatible API to build **UChat**, a privacy-first AI assistant for journalists.
 
-UChat is a local‑first ChatGPT‑style web app built with Laravel. It talks to a locally running open‑source LLM (via Ollama), supports streaming responses, Markdown tables and Mermaid diagrams (sanitized), right‑to‑left text, and an optional archive‑grounded RAG mode backed by Postgres (pgvector + full‑text search).
+UChat provides retrieval-augmented question answering over a continuously growing archive of more than 260,000 news articles enriched with metadata such as countries, dates, categories, tags, and authors. It combines full-text search with semantic search (PostgreSQL + pgvector), supports daily data updates, and uses multi-agent reasoning to generate grounded responses. The system runs a locally hosted 20B open-source language model without relying on cloud AI services, ensuring data privacy. It was initially deployed on a Laravel + Ollama stack and is being prepared for deployment on the company's internal server.
+
 
 ## Features
 
